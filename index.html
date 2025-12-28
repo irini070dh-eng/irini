@@ -1,0 +1,137 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Greek Irini - Authentic Greek Cuisine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+      body {
+        background-color: #09090b;
+        color: #f8fafc;
+        font-family: 'Inter', sans-serif;
+        overflow-x: hidden;
+      }
+      h1, h2, h3, h4, .font-serif {
+        font-family: 'Cormorant Garamond', serif;
+      }
+      .glass {
+        background: rgba(24, 24, 27, 0.7);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .gold-gradient {
+        background: linear-gradient(135deg, #d4af37 0%, #f9e29b 50%, #d4af37 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .gold-bg {
+        background: linear-gradient(135deg, #d4af37 0%, #f9e29b 50%, #d4af37 100%);
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #09090b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #27272a;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #3f3f46;
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(0) rotateY(0deg); }
+        50% { transform: translateY(-20px) rotateY(10deg); }
+      }
+      .animate-float {
+        animation: float 6s ease-in-out infinite;
+      }
+
+      @keyframes rotate3d {
+        0% { transform: rotateY(0deg) rotateX(0deg); }
+        100% { transform: rotateY(360deg) rotateX(10deg); }
+      }
+      .perspective-1000 {
+        perspective: 1000px;
+      }
+      .preserve-3d {
+        transform-style: preserve-3d;
+      }
+      
+      /* Enhanced Entry Animations */
+      @keyframes revealUp {
+        from { 
+          opacity: 0; 
+          transform: translateY(40px) scale(0.98); 
+          filter: blur(10px);
+        }
+        to { 
+          opacity: 1; 
+          transform: translateY(0) scale(1); 
+          filter: blur(0);
+        }
+      }
+      .animate-reveal {
+        animation: revealUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      .animate-slide-in-right {
+        animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes mobileItemEntry {
+        from { transform: translateX(30px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      .mobile-nav-item {
+        opacity: 0;
+        animation: mobileItemEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Exit animation */
+      @keyframes fadeOutDown {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(20px); filter: blur(5px); }
+      }
+      .animate-exit {
+        animation: fadeOutDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      
+      .stagger-1 { animation-delay: 0.1s; }
+      .stagger-2 { animation-delay: 0.2s; }
+      .stagger-3 { animation-delay: 0.3s; }
+      .stagger-4 { animation-delay: 0.4s; }
+      .stagger-5 { animation-delay: 0.5s; }
+      .stagger-6 { animation-delay: 0.6s; }
+      .stagger-7 { animation-delay: 0.7s; }
+      .stagger-8 { animation-delay: 0.8s; }
+      .stagger-9 { animation-delay: 0.9s; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
