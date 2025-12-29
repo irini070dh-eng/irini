@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useContext } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Menu from './components/Menu';
@@ -14,27 +14,12 @@ import GoogleReviewCard from './components/GoogleReviewCard';
 import { View } from './types';
 import { LanguageContext, CheckoutContext } from './index';
 import { TRANSLATIONS } from './constants';
-import { GoogleGenAI } from "@google/genai";
 
 const App: React.FC = () => {
   const [activeView, setView] = useState<View>('home');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isChangingView, setIsChangingView] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
-  
-  const [googleData, setGoogleData] = useState<{
-    rating: number | null;
-    reviews: number | null;
-    lastSync: Date | null;
-    isLoading: boolean;
-    sources: any[];
-  }>({
-    rating: 5.0, 
-    reviews: 545,
-    lastSync: null,
-    isLoading: false,
-    sources: []
-  });
 
   const langCtx = useContext(LanguageContext);
   const checkoutCtx = useContext(CheckoutContext);
@@ -64,41 +49,43 @@ const App: React.FC = () => {
     handleViewChange('order-confirmation');
   };
 
-  const fetchLiveReviews = useCallback(async () => {
-    setGoogleData(prev => ({ ...prev, isLoading: true }));
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `SEARCH FOR 'Restaurant Irini' at Weimarstraat 174, 2562 HD Den Haag. Return JSON strictly: {"rating": number, "count": number}.`;
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: { tools: [{ googleSearch: {} }] },
-      });
-      const text = response.text || "";
-      const match = text.match(/\{.*\}/s);
-      if (match) {
-        const data = JSON.parse(match[0]);
-        setGoogleData({
-          rating: data.rating || 5.0,
-          reviews: data.count || 545,
-          lastSync: new Date(),
-          isLoading: false,
-          sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
-        });
-      }
-    } catch (e) {
-      setGoogleData(prev => ({ ...prev, isLoading: false }));
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchLiveReviews();
-    const interval = setInterval(fetchLiveReviews, 300000); 
-    return () => clearInterval(interval);
-  }, [fetchLiveReviews]);
-
   return (
-    <div className="min-h-screen selection:bg-blue-200 selection:text-blue-700 bg-gradient-to-b from-white to-blue-50 flex flex-col">
+    <div className="min-h-screen selection:bg-blue-200 selection:text-blue-700 bg-gradient-to-b from-white to-blue-50 flex flex-col relative overflow-hidden">
+      {/* Animated Floating Background Shapes - Apple Style */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        {/* Shape 1 - Blue */}
+        <div 
+          className="absolute w-[800px] h-[800px] rounded-full opacity-30 blur-[80px]"
+          style={{
+            background: 'radial-gradient(circle, #0066cc 0%, #4da6ff 50%, transparent 70%)',
+            animation: 'float-1 25s ease-in-out infinite',
+            top: '-10%',
+            left: '-10%'
+          }}
+        />
+        {/* Shape 2 - Light Blue */}
+        <div 
+          className="absolute w-[700px] h-[700px] rounded-full opacity-35 blur-[70px]"
+          style={{
+            background: 'radial-gradient(circle, #4da6ff 0%, #0066cc 50%, transparent 70%)',
+            animation: 'float-2 30s ease-in-out infinite',
+            top: '30%',
+            right: '-10%'
+          }}
+        />
+        {/* Shape 3 - White/Blue Mix */}
+        <div 
+          className="absolute w-[900px] h-[900px] rounded-full opacity-25 blur-[90px]"
+          style={{
+            background: 'radial-gradient(circle, #ffffff 0%, #4da6ff 40%, #0066cc 60%, transparent 70%)',
+            animation: 'float-3 28s ease-in-out infinite',
+            bottom: '-15%',
+            left: '15%'
+          }}
+        />
+      </div>
+
+      <div className="relative z-10">
       <Header 
         onCartOpen={() => setIsCartOpen(true)} 
         activeView={activeView} 
@@ -117,7 +104,7 @@ const App: React.FC = () => {
                     </div>
                  </div>
                  <div className="space-y-12">
-                   <h2 className="text-6xl md:text-8xl font-serif font-bold leading-[1.1] text-gray-800">Heritage in <span className="italic gold-gradient">Every Savor</span></h2>
+                   <h2 className="text-6xl md:text-8xl font-serif font-bold leading-[1.1] text-gray-800">Heritage in <span className="italic blue-gradient">Every Savor</span></h2>
                    <p className="text-zinc-400 text-xl leading-relaxed font-light">Combining traditional family recipes with modern culinary craftsmanship since 1984 in Den Haag.</p>
                    <button onClick={() => handleViewChange('about')} className="group relative px-14 py-6 overflow-hidden rounded-2xl border border-zinc-800 hover:border-gold-400 transition-all active:scale-95">
                       <span className="relative text-[10px] font-bold uppercase tracking-[0.3em]">{t.aboutUs}</span>
@@ -128,9 +115,9 @@ const App: React.FC = () => {
             <section className="py-48 bg-zinc-950 border-t border-zinc-900">
                <div className="max-w-7xl mx-auto px-4">
                  <GoogleReviewCard 
-                   rating={googleData.rating} 
-                   reviews={googleData.reviews} 
-                   isLoading={googleData.isLoading} 
+                   rating={5.0} 
+                   reviews={545} 
+                   isLoading={false} 
                    onWriteReview={() => {
                      window.open('https://www.google.com/maps/place/Restaurant+Irini/@52.07532,4.2805916,21z/data=!4m16!1m7!3m6!1s0x47c5b0e074091211:0x13c8203ba4d6c277!2sSirtaki!8m2!3d52.0732918!4d4.2674365!16s%2Fg%2F1tvykyvy!3m7!1s0x47c5b10052097b33:0xee46939b90160e!8m2!3d52.0753369!4d4.2805116!9m1!1b1!16s%2Fg%2F11ms1d26zp?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoASAFQAw%3D%3D', '_blank', 'noopener,noreferrer');
                    }} 
@@ -162,6 +149,7 @@ const App: React.FC = () => {
       </main>
 
       <Footer />
+      </div>
       
       {/* Hidden Dev Trigger for Staff Portal */}
       <div className="fixed bottom-4 left-4 z-[200] opacity-10 hover:opacity-100 transition-opacity">

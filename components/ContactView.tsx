@@ -1,19 +1,21 @@
 
 import React, { useContext } from 'react';
-import { LanguageContext } from '../index';
+import { LanguageContext, SettingsContext } from '../index';
 import { TRANSLATIONS } from '../constants';
 
 const ContactView: React.FC = () => {
   const langCtx = useContext(LanguageContext);
-  if (!langCtx) return null;
+  const settingsCtx = useContext(SettingsContext);
+  if (!langCtx || !settingsCtx) return null;
   const { language } = langCtx;
+  const { settings } = settingsCtx;
   const t = TRANSLATIONS[language];
 
-  const fullAddress = "Weimarstraat 174, 2562 HD Den Haag, Netherlands";
+  const fullAddress = `${settings.address}, ${settings.postalCode} ${settings.city}, ${settings.country}`;
   const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   
-  const whatsappNumber = "31705550123";
-  const defaultMsg = encodeURIComponent(language === 'pl' ? "Dzień dobry! Piszę ze strony Greek Irini..." : "Hallo! Ik schrijf vanaf de website van Greek Irini...");
+  const whatsappNumber = settings.phone.replace(/\D/g, '');
+  const defaultMsg = encodeURIComponent(language === 'pl' ? `Dzień dobry! Piszę ze strony ${settings.name}...` : `Hallo! Ik schrijf vanaf de website van ${settings.name}...`);
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${defaultMsg}`;
 
   return (
@@ -50,6 +52,43 @@ const ContactView: React.FC = () => {
 
           {/* Right Side: Contact Info & WhatsApp */}
           <div className="space-y-10">
+            {/* Premium Phone Call Card */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-blue-500/0 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              
+              <div className="relative glass p-10 rounded-[3rem] border border-blue-500/20 group-hover:border-blue-500/40 transition-all duration-500 overflow-hidden shadow-2xl">
+                {/* Decorative Pattern */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-blue-500/15 transition-colors" />
+                
+                <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left relative z-10">
+                  <div className="w-20 h-20 rounded-[1.5rem] bg-white border border-blue-500/30 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 group-hover:scale-110 shadow-lg shadow-blue-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <h4 className="text-3xl font-serif font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
+                        {language === 'pl' ? 'Zadzwoń do Nas' : 'Bel Ons'}
+                      </h4>
+                      <p className="text-gray-600 text-sm font-light tracking-wide">
+                        {language === 'pl' ? 'Bezpośredni kontakt telefoniczny dla rezerwacji i pytań.' : 'Direct telefonisch contact voor reserveringen en vragen.'}
+                      </p>
+                    </div>
+                    <a 
+                      href={`tel:${settings.phone}`} 
+                      className="inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-[0.3em] text-[10px] rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50"
+                    >
+                      {language === 'pl' ? 'ZADZWOŃ TERAZ' : 'BEL NU'}
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Premium WhatsApp Card */}
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-emerald-500/0 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -103,7 +142,7 @@ const ContactView: React.FC = () => {
               />
               <div className="absolute top-6 left-6 z-20">
                 <div className="glass px-6 py-3 rounded-2xl border border-blue-300 shadow-lg">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Weimarstraat 174, Den Haag</span>
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{settings.address}, {settings.city}</span>
                 </div>
               </div>
             </div>
@@ -112,11 +151,11 @@ const ContactView: React.FC = () => {
             <div className="grid grid-cols-2 gap-6">
               <div className="glass p-8 rounded-[2rem] border border-blue-200">
                 <p className="text-[9px] uppercase tracking-widest text-gray-600 font-bold mb-2">Email Us</p>
-                <p className="text-sm text-gray-800 font-medium">info@greekirini.nl</p>
+                <p className="text-sm text-gray-800 font-medium">{settings.email}</p>
               </div>
               <div className="glass p-8 rounded-[2rem] border border-blue-200">
                 <p className="text-[9px] uppercase tracking-widest text-gray-600 font-bold mb-2">Call Us</p>
-                <p className="text-sm text-gray-800 font-medium">+31 70 555 0123</p>
+                <p className="text-sm text-gray-800 font-medium">{settings.phone}</p>
               </div>
             </div>
           </div>

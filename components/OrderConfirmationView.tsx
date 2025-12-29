@@ -15,6 +15,8 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
   const ordersCtx = useContext(OrdersContext);
   const [order, setOrder] = useState<Order | null>(null);
   const [showConfetti, setShowConfetti] = useState(true);
+  const [statusChanged, setStatusChanged] = useState(false);
+  const [previousStatus, setPreviousStatus] = useState<string | null>(null);
 
   if (!langCtx || !ordersCtx) return null;
   const { language } = langCtx;
@@ -23,19 +25,32 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
   useEffect(() => {
     const foundOrder = ordersCtx.orders.find(o => o.id === orderId);
     if (foundOrder) {
+      // Check if status changed
+      if (order && order.status !== foundOrder.status) {
+        console.log('🔄 Status changed:', order.status, '→', foundOrder.status);
+        setPreviousStatus(order.status);
+        setStatusChanged(true);
+        // Hide notification after 3 seconds
+        setTimeout(() => setStatusChanged(false), 3000);
+      }
       setOrder(foundOrder);
+    } else {
+      console.log('❌ Order not found:', orderId, 'Available orders:', ordersCtx.orders.length);
     }
-    // Hide confetti after animation
+  }, [orderId, ordersCtx.orders]);
+
+  // Separate useEffect for confetti (runs only once)
+  useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 3000);
     return () => clearTimeout(timer);
-  }, [orderId, ordersCtx.orders]);
+  }, []);
 
   if (!order) {
     return (
-      <section className="min-h-screen py-24 px-4 bg-zinc-950 flex items-center justify-center">
+      <section className="min-h-screen py-24 px-4 bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gold-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-zinc-500">{language === 'pl' ? 'Ładowanie zamówienia...' : 'Bestelling laden...'}</p>
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">{language === 'pl' ? 'Ładowanie zamówienia...' : 'Bestelling laden...'}</p>
         </div>
       </section>
     );
@@ -52,7 +67,28 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
   });
 
   return (
-    <section className="min-h-screen py-24 px-4 bg-zinc-950 relative overflow-hidden">
+    <section className="min-h-screen py-24 px-4 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
+      {/* Status Changed Notification */}
+      {statusChanged && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-reveal">
+          <div className="glass px-8 py-4 rounded-2xl border border-blue-500 bg-blue-50 shadow-2xl flex items-center gap-4">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center animate-pulse">
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <div className="font-bold text-blue-800">
+                {language === 'pl' ? '🎉 Status zaktualizowany!' : '🎉 Status bijgewerkt!'}
+              </div>
+              <div className="text-sm text-blue-600">
+                {language === 'pl' ? 'Twoje zamówienie jest w drodze' : 'Je bestelling is onderweg'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confetti Animation */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50">
@@ -81,10 +117,10 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">
+          <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4 text-gray-800">
             {t.orderConfirmed}
           </h1>
-          <p className="text-zinc-400 text-lg">
+          <p className="text-gray-600 text-lg">
             {language === 'pl' 
               ? 'Dziękujemy za zamówienie!'
               : 'Bedankt voor je bestelling!'
@@ -105,11 +141,11 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
         </div>
 
         {/* Order Details Card */}
-        <div className="glass rounded-3xl p-8 border border-zinc-800 mb-8 animate-reveal stagger-1">
-          <div className="flex items-center justify-between mb-8 pb-6 border-b border-zinc-800">
+        <div className="glass rounded-3xl p-8 border border-blue-200 bg-white/80 mb-8 animate-reveal stagger-1">
+          <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-300">
             <div>
-              <div className="text-xs uppercase tracking-wider text-zinc-500 mb-1">{t.orderNumber}</div>
-              <div className="text-2xl font-mono font-bold text-gold-400">{order.id}</div>
+              <div className="text-xs uppercase tracking-wider text-gray-600 mb-1">{t.orderNumber}</div>
+              <div className="text-2xl font-mono font-bold text-blue-600">{order.id}</div>
             </div>
             <div className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider ${
               order.payment.status === 'paid' 
@@ -123,73 +159,129 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
             </div>
           </div>
 
-          {/* Timeline */}
+          {/* Dynamic Timeline based on order.status */}
           <div className="space-y-6 mb-8">
+            {/* Step 1: Order Received - Always completed */}
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-green-400">✓</span>
+                <span className="text-green-500">✓</span>
               </div>
               <div>
-                <div className="font-bold">{language === 'pl' ? 'Zamówienie przyjęte' : 'Bestelling ontvangen'}</div>
-                <div className="text-sm text-zinc-500">
+                <div className="font-bold text-gray-800">{language === 'pl' ? 'Zamówienie przyjęte' : 'Bestelling ontvangen'}</div>
+                <div className="text-sm text-gray-600">
                   {new Date(order.createdAt).toLocaleTimeString(language === 'nl' ? 'nl-NL' : 'pl-PL', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-gold-400/10 border border-gold-400/20 flex items-center justify-center flex-shrink-0 animate-pulse">
-                <span className="text-gold-400">🍳</span>
+            {/* Step 2: Preparing */}
+            <div className={`flex items-start gap-4 ${['pending'].includes(order.status) ? 'opacity-50' : ''}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                order.status === 'preparing' 
+                  ? 'bg-blue-100 border border-blue-300 animate-pulse' 
+                  : ['ready', 'delivery', 'completed'].includes(order.status)
+                  ? 'bg-green-500/10 border border-green-500/20'
+                  : 'bg-gray-200 border border-gray-300'
+              }`}>
+                <span className={
+                  order.status === 'preparing'
+                    ? 'text-blue-600'
+                    : ['ready', 'delivery', 'completed'].includes(order.status)
+                    ? 'text-green-500'
+                    : 'text-gray-400'
+                }>
+                  {['ready', 'delivery', 'completed'].includes(order.status) ? '✓' : '🍳'}
+                </span>
               </div>
               <div>
-                <div className="font-bold">{language === 'pl' ? 'Przygotowywanie' : 'In voorbereiding'}</div>
-                <div className="text-sm text-zinc-500">{language === 'pl' ? 'W kuchni' : 'In de keuken'}</div>
+                <div className="font-bold text-gray-800">{language === 'pl' ? 'Przygotowywanie' : 'In voorbereiding'}</div>
+                <div className="text-sm text-gray-600">
+                  {order.status === 'preparing' 
+                    ? (language === 'pl' ? 'W kuchni...' : 'In de keuken...')
+                    : ['ready', 'delivery', 'completed'].includes(order.status)
+                    ? (language === 'pl' ? '✓ Gotowe' : '✓ Klaar')
+                    : (language === 'pl' ? 'Oczekuje' : 'Wachten')
+                  }
+                </div>
               </div>
             </div>
 
-            <div className="flex items-start gap-4 opacity-50">
-              <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center flex-shrink-0">
-                <span>{order.delivery.type === 'delivery' ? '🚗' : '🏪'}</span>
+            {/* Step 3: Ready/Out for Delivery */}
+            <div className={`flex items-start gap-4 ${!['ready', 'delivery', 'completed'].includes(order.status) ? 'opacity-50' : ''}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                order.status === 'ready' || order.status === 'delivery'
+                  ? 'bg-blue-100 border border-blue-300 animate-pulse'
+                  : order.status === 'completed'
+                  ? 'bg-green-500/10 border border-green-500/20'
+                  : 'bg-gray-200 border border-gray-300'
+              }`}>
+                <span className={
+                  order.status === 'ready' || order.status === 'delivery'
+                    ? 'text-blue-600'
+                    : order.status === 'completed'
+                    ? 'text-green-500'
+                    : 'text-gray-400'
+                }>
+                  {order.status === 'completed' 
+                    ? '✓' 
+                    : order.delivery.type === 'delivery' ? '🚗' : '🏪'
+                  }
+                </span>
               </div>
               <div>
-                <div className="font-bold">
-                  {order.delivery.type === 'delivery' 
-                    ? (language === 'pl' ? 'Dostawa' : 'Bezorging')
-                    : (language === 'pl' ? 'Gotowe do odbioru' : 'Klaar voor afhalen')
+                <div className="font-bold text-gray-800">
+                  {order.status === 'delivery' 
+                    ? (language === 'pl' ? 'W drodze!' : 'Onderweg!')
+                    : order.status === 'ready'
+                    ? (order.delivery.type === 'pickup' 
+                      ? (language === 'pl' ? 'Gotowe do odbioru!' : 'Klaar voor afhalen!')
+                      : (language === 'pl' ? 'Przygotowane do wysyłki' : 'Klaar voor bezorging'))
+                    : order.status === 'completed'
+                    ? (language === 'pl' ? '✓ Dostarczone' : '✓ Afgeleverd')
+                    : (order.delivery.type === 'delivery' 
+                      ? (language === 'pl' ? 'Dostawa' : 'Bezorging')
+                      : (language === 'pl' ? 'Gotowe do odbioru' : 'Klaar voor afhalen'))
                   }
                 </div>
-                <div className="text-sm text-zinc-500">
-                  {t.estimatedTime}: ~{formattedTime}
+                <div className="text-sm text-gray-600">
+                  {order.status === 'completed'
+                    ? (language === 'pl' ? 'Smacznego!' : 'Eet smakelijk!')
+                    : order.status === 'delivery'
+                    ? (language === 'pl' ? `Za ~${Math.max(5, estimatedTime - 30)} min` : `Over ~${Math.max(5, estimatedTime - 30)} min`)
+                    : order.status === 'ready'
+                    ? (language === 'pl' ? 'Możesz odebrać!' : 'Kan worden opgehaald!')
+                    : `${t.estimatedTime}: ~${formattedTime}`
+                  }
                 </div>
               </div>
             </div>
           </div>
 
           {/* Delivery/Pickup Info */}
-          <div className="p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800">
+          <div className="p-6 rounded-2xl bg-blue-50 border border-blue-200">
             {order.delivery.type === 'delivery' ? (
               <>
-                <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                   <span>📍</span>
                   <span>{t.deliveryAddress}</span>
                 </div>
-                <div className="font-bold text-lg">
+                <div className="font-bold text-lg text-gray-800">
                   {order.customer.address}
                 </div>
-                <div className="text-zinc-500">
+                <div className="text-gray-600">
                   {order.customer.postalCode} {order.customer.city}
                 </div>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2 text-sm text-zinc-400 mb-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
                   <span>🏪</span>
                   <span>{t.pickupAddress}</span>
                 </div>
-                <div className="font-bold text-lg">
+                <div className="font-bold text-lg text-gray-800">
                   Weimarstraat 174
                 </div>
-                <div className="text-zinc-500">
+                <div className="text-gray-600">
                   2562 HD Den Haag
                 </div>
               </>
@@ -198,30 +290,30 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
         </div>
 
         {/* Order Summary */}
-        <div className="glass rounded-3xl p-8 border border-zinc-800 mb-8 animate-reveal stagger-2">
-          <h3 className="text-lg font-bold mb-6">{t.orderSummary}</h3>
+        <div className="glass rounded-3xl p-8 border border-blue-200 bg-white/80 mb-8 animate-reveal stagger-2">
+          <h3 className="text-lg font-bold mb-6 text-gray-800">{t.orderSummary}</h3>
           <div className="space-y-3 mb-6">
             {order.items.map((item, idx) => (
               <div key={idx} className="flex justify-between">
-                <span className="text-zinc-400">{item.quantity}x {item.name}</span>
-                <span>€{(item.price * item.quantity).toFixed(2)}</span>
+                <span className="text-gray-600">{item.quantity}x {item.name}</span>
+                <span className="text-gray-800">€{(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}
           </div>
-          <div className="border-t border-zinc-800 pt-4 space-y-2">
+          <div className="border-t border-gray-300 pt-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">{t.subtotal}</span>
-              <span>€{order.subtotal.toFixed(2)}</span>
+              <span className="text-gray-600">{t.subtotal}</span>
+              <span className="text-gray-800">€{order.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">{t.deliveryFee}</span>
-              <span className={order.deliveryFee === 0 ? 'text-green-400' : ''}>
+              <span className="text-gray-600">{t.deliveryFee}</span>
+              <span className={order.deliveryFee === 0 ? 'text-green-500' : 'text-gray-800'}>
                 {order.deliveryFee === 0 ? 'Gratis' : `€${order.deliveryFee.toFixed(2)}`}
               </span>
             </div>
-            <div className="flex justify-between text-xl font-bold pt-4 border-t border-zinc-800">
-              <span>{t.total}</span>
-              <span className="gold-gradient">€{order.total.toFixed(2)}</span>
+            <div className="flex justify-between text-xl font-bold pt-4 border-t border-gray-300">
+              <span className="text-gray-800">{t.total}</span>
+              <span className="blue-gradient">€{order.total.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -230,21 +322,21 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
         <div className="flex flex-col sm:flex-row gap-4 animate-reveal stagger-3">
           <button
             onClick={onBackToMenu}
-            className="flex-1 py-5 border border-zinc-800 rounded-2xl font-bold uppercase tracking-widest hover:bg-zinc-900 transition-all"
+            className="flex-1 py-5 border border-gray-300 rounded-2xl font-bold uppercase tracking-widest hover:bg-gray-100 transition-all text-gray-800"
           >
             {t.backToMenu}
           </button>
           <button
             onClick={onTrackOrder}
-            className="flex-1 py-5 gold-bg text-zinc-950 rounded-2xl font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+            className="flex-1 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
           >
             {t.trackOrder}
           </button>
         </div>
 
         {/* Contact Info */}
-        <div className="mt-12 text-center text-zinc-500 text-sm">
-          <p>{language === 'pl' ? 'Pytania?' : 'Vragen?'} <a href="tel:+31703456789" className="text-gold-400 hover:underline">+31 70 345 67 89</a></p>
+        <div className="mt-12 text-center text-gray-600 text-sm">
+          <p>{language === 'pl' ? 'Pytania?' : 'Vragen?'} <a href="tel:+31703456789" className="text-blue-600 hover:underline">+31 70 345 67 89</a></p>
         </div>
       </div>
 

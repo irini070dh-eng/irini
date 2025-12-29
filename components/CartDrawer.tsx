@@ -108,7 +108,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
                   </div>
                   <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full gold-bg transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-blue-600 to-blue-700 transition-all duration-500"
                       style={{ width: `${Math.min(100, (total / DELIVERY_CONFIG.freeDeliveryFrom) * 100)}%` }}
                     />
                   </div>
@@ -124,7 +124,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
 
               <div className="flex justify-between items-end mb-8">
                 <span className="text-zinc-500 uppercase tracking-widest text-xs font-bold">{t.subtotal}</span>
-                <span className="text-3xl font-serif font-bold gold-gradient">€{total.toFixed(2)}</span>
+                <span className="text-3xl font-serif font-bold blue-gradient">€{total.toFixed(2)}</span>
               </div>
               <button 
                 onClick={handleCheckout}
@@ -132,7 +132,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
                 className={`w-full py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-sm transition-all shadow-xl ${
                   isBelowMinimum 
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed' 
-                    : 'gold-bg text-zinc-950 hover:scale-[1.02] active:scale-95 shadow-gold-400/10'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:scale-[1.02] active:scale-95 shadow-blue-400/20'
                 }`}
               >
                 {t.checkout}

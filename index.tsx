@@ -14,7 +14,10 @@ import {
   MenuItem,
   RestaurantSettings,
   DELIVERY_CONFIG,
-  DEFAULT_RESTAURANT_SETTINGS
+  DEFAULT_RESTAURANT_SETTINGS,
+  StaffNote,
+  Driver,
+  DriverStatus
 } from './types';
 import { MENU_ITEMS } from './constants';
 import { sendOrderConfirmationEmail } from './services/emailService';
@@ -46,9 +49,21 @@ interface OrdersContextType {
   getOrder: (orderId: string) => Order | undefined;
   getPaidOrders: () => Order[];
   getActiveOrders: () => Order[];
+  addStaffNote: (orderId: string, text: string, author: string) => void;
+  assignDriver: (orderId: string, driverId: string | null) => void;
 }
 
 export const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
+
+interface DriversContextType {
+  drivers: Driver[];
+  addDriver: (name: string, phone: string) => void;
+  updateDriverStatus: (driverId: string, status: DriverStatus) => void;
+  removeDriver: (driverId: string) => void;
+  getAvailableDrivers: () => Driver[];
+}
+
+export const DriversContext = createContext<DriversContextType | undefined>(undefined);
 
 interface CreateOrderParams {
   customer: CustomerInfo;
@@ -133,6 +148,20 @@ const Root = () => {
     return saved ? JSON.parse(saved) : DEFAULT_RESTAURANT_SETTINGS;
   });
 
+  // Drivers State
+  const [drivers, setDrivers] = useState<Driver[]>(() => {
+    const saved = localStorage.getItem('drivers');
+    if (!saved) {
+      // Initialize with 3 default drivers
+      return [
+        { id: 'DRV-001', name: 'Nikos Papadopoulos', phone: '+31612345678', status: 'available', activeDeliveries: 0 },
+        { id: 'DRV-002', name: 'Dimitris Kostas', phone: '+31687654321', status: 'available', activeDeliveries: 0 },
+        { id: 'DRV-003', name: 'Yannis Stavros', phone: '+31698765432', status: 'offline', activeDeliveries: 0 }
+      ];
+    }
+    return JSON.parse(saved);
+  });
+
   useEffect(() => {
     localStorage.setItem('lang', language);
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -150,6 +179,10 @@ const Root = () => {
   useEffect(() => {
     localStorage.setItem('restaurantSettings', JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    localStorage.setItem('drivers', JSON.stringify(drivers));
+  }, [drivers]);
 
   useEffect(() => {
     localStorage.setItem('orders', JSON.stringify(orders));
@@ -278,6 +311,55 @@ const Root = () => {
     (o.payment.status === 'paid' || o.payment.method === 'cash')
   );
 
+  const addStaffNote = (orderId: string, text: string, author: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        const newNote: StaffNote = {
+          id: `NOTE-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          text,
+          author,
+          timestamp: new Date()
+        };
+        return {
+          ...o,
+          staffNotes: [...(o.staffNotes || []), newNote],
+          updatedAt: new Date()
+        };
+      }
+      return o;
+    }));
+  };
+
+  const assignDriver = (orderId: string, driverId: string | null) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        // Update driver's active deliveries count
+        if (o.assignedDriver && o.assignedDriver !== driverId) {
+          // Remove from old driver
+          setDrivers(d => d.map(driver => 
+            driver.id === o.assignedDriver 
+              ? { ...driver, activeDeliveries: Math.max(0, driver.activeDeliveries - 1) }
+              : driver
+          ));
+        }
+        if (driverId) {
+          // Add to new driver
+          setDrivers(d => d.map(driver => 
+            driver.id === driverId 
+              ? { ...driver, activeDeliveries: driver.activeDeliveries + 1, status: 'busy' as DriverStatus }
+              : driver
+          ));
+        }
+        return {
+          ...o,
+          assignedDriver: driverId || undefined,
+          updatedAt: new Date()
+        };
+      }
+      return o;
+    }));
+  };
+
   // Menu Management Functions
   const updateMenuItem = (id: string, updates: Partial<MenuItem>) => {
     setMenuItems(prev => prev.map(item => 
@@ -306,6 +388,32 @@ const Root = () => {
     setSettings(prev => ({ ...prev, ...updates }));
   };
 
+  // Driver Management Functions
+  const addDriver = (name: string, phone: string) => {
+    const newDriver: Driver = {
+      id: `DRV-${Date.now().toString().slice(-6)}`,
+      name,
+      phone,
+      status: 'available',
+      activeDeliveries: 0
+    };
+    setDrivers(prev => [...prev, newDriver]);
+  };
+
+  const updateDriverStatus = (driverId: string, status: DriverStatus) => {
+    setDrivers(prev => prev.map(d => 
+      d.id === driverId ? { ...d, status } : d
+    ));
+  };
+
+  const removeDriver = (driverId: string) => {
+    setDrivers(prev => prev.filter(d => d.id !== driverId));
+  };
+
+  const getAvailableDrivers = () => {
+    return drivers.filter(d => d.status !== 'offline');
+  };
+
   const resetSettings = () => {
     setSettings(DEFAULT_RESTAURANT_SETTINGS);
   };
@@ -315,14 +423,16 @@ const Root = () => {
   return (
     <LanguageContext.Provider value={{ language, setLanguage: setLang, isRTL: language === 'ar' }}>
       <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, itemCount }}>
-        <OrdersContext.Provider value={{ orders, updateOrderStatus, updatePaymentStatus, getOrder, getPaidOrders, getActiveOrders }}>
-          <CheckoutContext.Provider value={{ createOrder, currentOrderId, setCurrentOrderId }}>
-            <MenuContext.Provider value={{ menuItems, updateMenuItem, addMenuItem, deleteMenuItem, toggleAvailability, getAvailableItems }}>
-              <SettingsContext.Provider value={{ settings, updateSettings, resetSettings }}>
-                <App />
-              </SettingsContext.Provider>
-            </MenuContext.Provider>
-          </CheckoutContext.Provider>
+        <OrdersContext.Provider value={{ orders, updateOrderStatus, updatePaymentStatus, getOrder, getPaidOrders, getActiveOrders, addStaffNote, assignDriver }}>
+          <DriversContext.Provider value={{ drivers, addDriver, updateDriverStatus, removeDriver, getAvailableDrivers }}>
+            <CheckoutContext.Provider value={{ createOrder, currentOrderId, setCurrentOrderId }}>
+              <MenuContext.Provider value={{ menuItems, updateMenuItem, addMenuItem, deleteMenuItem, toggleAvailability, getAvailableItems }}>
+                <SettingsContext.Provider value={{ settings, updateSettings, resetSettings }}>
+                  <App />
+                </SettingsContext.Provider>
+              </MenuContext.Provider>
+            </CheckoutContext.Provider>
+          </DriversContext.Provider>
         </OrdersContext.Provider>
       </CartContext.Provider>
     </LanguageContext.Provider>

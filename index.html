@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Greek Irini - Authentic Greek Cuisine</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -26,13 +27,17 @@
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
-      .gold-gradient {
+      .blue-gradient {
         background: linear-gradient(135deg, #0066cc 0%, #4da6ff 50%, #0066cc 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
-      .gold-bg {
+      .blue-bg {
         background: linear-gradient(135deg, #0066cc 0%, #4da6ff 50%, #0066cc 100%);
+      }
+      /* Gold tylko dla review stars */
+      .gold-text {
+        color: #fbbf24;
       }
       ::-webkit-scrollbar {
         width: 8px;
@@ -83,6 +88,13 @@
       .animate-reveal {
         animation: revealUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
+      .stagger-1 { animation-delay: 0.1s; opacity: 0; }
+      .stagger-2 { animation-delay: 0.2s; opacity: 0; }
+      .stagger-3 { animation-delay: 0.3s; opacity: 0; }
+      .stagger-4 { animation-delay: 0.4s; opacity: 0; }
+      .stagger-5 { animation-delay: 0.5s; opacity: 0; }
+      .stagger-6 { animation-delay: 0.6s; opacity: 0; }
+      .stagger-7 { animation-delay: 0.7s; opacity: 0; }
 
       @keyframes slideInRight {
         from { transform: translateX(100%); opacity: 0; }
@@ -119,14 +131,63 @@
       .stagger-7 { animation-delay: 0.7s; }
       .stagger-8 { animation-delay: 0.8s; }
       .stagger-9 { animation-delay: 0.9s; }
+
+      /* Floating shapes animations - Apple style */
+      @keyframes float-1 {
+        0%, 100% { 
+          transform: translate(0, 0) scale(1);
+          opacity: 0.2;
+        }
+        25% { 
+          transform: translate(100px, -50px) scale(1.1);
+          opacity: 0.3;
+        }
+        50% { 
+          transform: translate(50px, 80px) scale(0.9);
+          opacity: 0.25;
+        }
+        75% { 
+          transform: translate(-80px, 30px) scale(1.05);
+          opacity: 0.18;
+        }
+      }
+      
+      @keyframes float-2 {
+        0%, 100% { 
+          transform: translate(0, 0) scale(1) rotate(0deg);
+          opacity: 0.25;
+        }
+        33% { 
+          transform: translate(-120px, 60px) scale(1.15) rotate(120deg);
+          opacity: 0.3;
+        }
+        66% { 
+          transform: translate(80px, -80px) scale(0.85) rotate(240deg);
+          opacity: 0.2;
+        }
+      }
+      
+      @keyframes float-3 {
+        0%, 100% { 
+          transform: translate(0, 0) scale(1);
+          opacity: 0.15;
+        }
+        30% { 
+          transform: translate(90px, 100px) scale(1.2);
+          opacity: 0.2;
+        }
+        60% { 
+          transform: translate(-100px, -70px) scale(0.95);
+          opacity: 0.18;
+        }
+      }
     </style>
   <script type="importmap">
 {
   "imports": {
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+    "react": "https://esm.sh/react@^19.2.3"
   }
 }
 </script>

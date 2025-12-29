@@ -43,6 +43,23 @@ export interface OrderItem {
   name: string;
 }
 
+export type DriverStatus = 'available' | 'busy' | 'offline';
+
+export interface Driver {
+  id: string;
+  name: string;
+  phone: string;
+  status: DriverStatus;
+  activeDeliveries: number;
+}
+
+export interface StaffNote {
+  id: string;
+  text: string;
+  author: string;
+  timestamp: Date;
+}
+
 export interface Order {
   id: string;
   items: OrderItem[];
@@ -56,6 +73,8 @@ export interface Order {
   updatedAt: Date;
   customer: CustomerInfo;
   estimatedReadyTime?: Date;
+  staffNotes?: StaffNote[];
+  assignedDriver?: string; // Driver ID
 }
 
 export interface TranslationSet {

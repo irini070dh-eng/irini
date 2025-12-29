@@ -76,7 +76,7 @@ const TeamCard: React.FC<{ member: TeamMember; index: number }> = ({ member, ind
           {/* Enhanced Hover Bio Overlay */}
           <div className="absolute inset-0 flex items-end p-6 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out pointer-events-none group-hover:pointer-events-auto">
              <div className="w-full glass p-6 rounded-[2rem] border border-white/20 backdrop-blur-2xl translate-y-12 group-hover:translate-y-0 transition-all duration-1000 bg-black/40 shadow-2xl">
-                <div className="w-10 h-0.5 gold-bg mb-4 opacity-50 rounded-full" />
+                <div className="w-10 h-0.5 bg-gradient-to-r from-blue-600 to-blue-700 mb-4 opacity-50 rounded-full" />
                 <p className="text-white text-sm md:text-xs xl:text-sm leading-relaxed font-medium tracking-tight">
                   {member.bio}
                 </p>
@@ -189,7 +189,7 @@ const AboutView: React.FC = () => {
             </div>
             <h2 className="text-6xl font-serif font-bold leading-tight text-gray-800">
               {t.ourStoryTitle} <br/>
-              <span className="gold-gradient italic">In Den Haag</span>
+              <span className="blue-gradient italic">In Den Haag</span>
             </h2>
             <p className="text-gray-600 text-lg leading-relaxed font-light first-letter:text-5xl first-letter:font-serif first-letter:text-blue-600 first-letter:float-left first-letter:mr-3 first-letter:mt-1">
               {t.ourStoryText}
@@ -247,7 +247,7 @@ const AboutView: React.FC = () => {
                       {pillar.icon}
                     </div>
                     <div className="flex-1 space-y-4">
-                      <h3 className="text-3xl font-serif font-bold gold-gradient">{pillar.title}</h3>
+                      <h3 className="text-3xl font-serif font-bold blue-gradient">{pillar.title}</h3>
                       <p className="text-gray-600 leading-relaxed font-light">{pillar.text}</p>
                     </div>
                   </div>

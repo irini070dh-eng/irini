@@ -55,7 +55,7 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
     >
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 transition-all duration-500`}>
         {/* Usunięto overflow-hidden z tego kontenera, aby dropdown był widoczny */}
-        <div className={`glass border border-white/30 rounded-3xl md:rounded-[2.5rem] px-6 h-16 md:h-20 flex items-center justify-between shadow-2xl relative z-20`}>
+        <div className={`glass border border-blue-200/50 rounded-3xl md:rounded-[2.5rem] px-6 h-16 md:h-20 flex items-center justify-between shadow-xl shadow-blue-500/10 relative z-20`}>
           
           {/* Subtle sheen animation - teraz w osobnym kontenerze z overflow-hidden */}
           <div className="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
@@ -67,11 +67,11 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
             onClick={() => handleNavClick('home')}
             className="flex items-center gap-3 group relative z-10"
           >
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:rotate-[15deg] group-hover:scale-110 shadow-lg shadow-blue-400/30">
-              <span className="text-white font-bold text-xl font-serif">I</span>
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:rotate-[15deg] group-hover:scale-110 shadow-[0_8px_25px_-5px_rgba(0,102,204,0.5)] group-hover:shadow-[0_12px_35px_-5px_rgba(0,102,204,0.7)]">
+              <span className="text-white font-bold text-2xl font-serif drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">I</span>
             </div>
-            <span className="text-xl md:text-2xl font-serif tracking-widest uppercase hidden xs:block text-gray-800">
-              Greek <span className="gold-gradient font-bold">Irini</span>
+            <span className="text-xl md:text-2xl font-serif tracking-widest uppercase hidden xs:block text-gray-900 font-bold">
+              Greek <span className="blue-gradient">Irini</span>
             </span>
           </button>
 
@@ -81,12 +81,12 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`text-[10px] font-bold uppercase tracking-[0.3em] transition-all duration-300 hover:text-blue-600 relative py-2 group/nav ${
-                  activeView === item.id ? 'text-blue-600' : 'text-gray-600'
+                className={`text-[11px] font-bold uppercase tracking-[0.3em] transition-all duration-300 hover:text-blue-600 relative py-2 group/nav ${
+                  activeView === item.id ? 'text-blue-600' : 'text-gray-800'
                 }`}
               >
                 {item.label}
-                <span className={`absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-blue-600 to-blue-700 transition-transform duration-500 origin-left ${
+                <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-600 to-blue-700 transition-transform duration-500 origin-left shadow-[0_0_8px_rgba(0,102,204,0.5)] ${
                   activeView === item.id ? 'scale-x-100' : 'scale-x-0 group-hover/nav:scale-x-100 opacity-50'
                 }`} />
               </button>
@@ -119,7 +119,7 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
                       <span>{l.flag}</span>
                       <span className="tracking-wide">{l.name}</span>
                     </div>
-                    {language === l.code && <div className="w-1.5 h-1.5 rounded-full gold-bg shadow-[0_0_10px_#d4af37]" />}
+                    {language === l.code && <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(0,102,204,0.6)]" />}
                   </button>
                 ))}
               </div>
@@ -134,7 +134,7 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartCtx.itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 gold-bg text-zinc-950 text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-zinc-900 shadow-lg animate-reveal">
+                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-white shadow-lg animate-reveal">
                   {cartCtx.itemCount}
                 </span>
               )}
@@ -184,7 +184,7 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
                     {item.label}
                   </span>
                   {activeView === item.id && (
-                    <div className="w-12 h-px gold-bg animate-reveal" />
+                    <div className="w-12 h-px bg-gradient-to-r from-blue-600 to-blue-700 animate-reveal" />
                   )}
                 </div>
               </button>

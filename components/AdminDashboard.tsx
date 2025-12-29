@@ -1,6 +1,6 @@
 
 import React, { useContext, useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { OrdersContext, LanguageContext, MenuContext, SettingsContext } from '../index';
+import { OrdersContext, LanguageContext, MenuContext, SettingsContext, DriversContext } from '../index';
 import { TRANSLATIONS, MENU_ITEMS } from '../constants';
 import { Order, OrderStatus, MenuItem, RestaurantSettings, Language } from '../types';
 
@@ -21,6 +21,7 @@ const AdminDashboard: React.FC = () => {
   const menuCtx = useContext(MenuContext);
   const settingsCtx = useContext(SettingsContext);
   const langCtx = useContext(LanguageContext);
+  const driversCtx = useContext(DriversContext);
   
   const [activeTab, setActiveTab] = useState<AdminTab>('orders');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -29,6 +30,14 @@ const AdminDashboard: React.FC = () => {
   const [statusChangePending, setStatusChangePending] = useState<StatusChangeRequest | null>(null);
   const [showReport, setShowReport] = useState(false);
   const [reportRange, setReportRange] = useState<ReportRange>('daily');
+  
+  // Date Range Picker State
+  const [customDateRange, setCustomDateRange] = useState<{start: Date | null, end: Date | null}>(() => {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    return { start: sevenDaysAgo, end: today };
+  });
   
   // Real-time Sync Simulation State
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connected');
@@ -43,17 +52,94 @@ const AdminDashboard: React.FC = () => {
   // Context & Settings
   const [audioAlertsEnabled, setAudioAlertsEnabled] = useState(true);
 
+  // Chart refs for Chart.js instances
+  const hourlyChartRef = useRef<HTMLCanvasElement>(null);
+  const revenueChartRef = useRef<HTMLCanvasElement>(null);
+  const categoryChartRef = useRef<HTMLCanvasElement>(null);
+  const deliveryChartRef = useRef<HTMLCanvasElement>(null);
+  const paymentChartRef = useRef<HTMLCanvasElement>(null);
+  const weekdayChartRef = useRef<HTMLCanvasElement>(null);
+  
+  const chartInstancesRef = useRef<Record<string, any>>({});
+
   // Menu Management State
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
+  const [isAddingNewItem, setIsAddingNewItem] = useState(false);
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('all');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  if (!ordersCtx || !langCtx || !menuCtx || !settingsCtx) return null;
-  const { orders, updateOrderStatus } = ordersCtx;
+  // Staff Notes State
+  const [newStaffNote, setNewStaffNote] = useState('');
+  const [staffName, setStaffName] = useState(() => {
+    const saved = localStorage.getItem('staffName');
+    return saved || 'Admin';
+  });
+
+  // Browser Notifications State
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [toastNotification, setToastNotification] = useState<{id: string, message: string, type: 'info' | 'success' | 'warning'} | null>(null);
+
+  // Handle image file upload
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image too large. Maximum size is 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      if (editingMenuItem) {
+        setEditingMenuItem({ ...editingMenuItem, image: base64 });
+      }
+      setUploadingImage(false);
+    };
+    reader.onerror = () => {
+      alert('Error reading file');
+      setUploadingImage(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  if (!ordersCtx || !langCtx || !menuCtx || !settingsCtx || !driversCtx) return null;
+  const { orders, updateOrderStatus, addStaffNote, assignDriver } = ordersCtx;
   const { menuItems, updateMenuItem, toggleAvailability, deleteMenuItem } = menuCtx;
   const { settings, updateSettings } = settingsCtx;
   const { language } = langCtx;
+  const { drivers, updateDriverStatus } = driversCtx;
   const t = TRANSLATIONS[language];
+
+  // Save staff name to localStorage
+  useEffect(() => {
+    localStorage.setItem('staffName', staffName);
+  }, [staffName]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+        });
+      }
+    }
+  }, []);
 
   const prevOrderCount = useRef(orders.length);
 
@@ -89,32 +175,67 @@ const AdminDashboard: React.FC = () => {
     } catch (e) {}
   }, [audioAlertsEnabled]);
 
+  // Detect new orders and send notifications
   useEffect(() => {
-    if (activeTab === 'orders' && orders.length > prevOrderCount.current) {
+    if (orders.length > prevOrderCount.current) {
+      const newOrder = orders[orders.length - 1];
+      
+      // Play sound
       playNotificationSound();
+      
+      // Show browser notification
+      if (notificationPermission === 'granted') {
+        const notification = new Notification('🔔 Nowe Zamówienie!', {
+          body: `Zamówienie #${newOrder.orderNumber}\nKlient: ${newOrder.customerName}\nKwota: €${newOrder.totalAmount.toFixed(2)}`,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: newOrder.id,
+          requireInteraction: true,
+          silent: false
+        });
+        
+        notification.onclick = () => {
+          window.focus();
+          setActiveTab('orders');
+          setSelectedOrder(newOrder);
+          notification.close();
+        };
+      }
+      
+      // Show toast notification
+      setToastNotification({
+        id: newOrder.id,
+        message: `Nowe zamówienie #${newOrder.orderNumber} od ${newOrder.customerName}`,
+        type: 'info'
+      });
+      
+      // Auto-hide toast after 5 seconds
+      setTimeout(() => setToastNotification(null), 5000);
     }
     prevOrderCount.current = orders.length;
-  }, [orders.length, activeTab, playNotificationSound]);
+  }, [orders, notificationPermission, playNotificationSound]);
 
   // Comprehensive Metrics Calculation
   const stats = useMemo(() => {
     const now = new Date();
-    const rangeInDays = reportRange === 'daily' ? 0 : reportRange === 'weekly' ? 7 : 30;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(now.getDate() - rangeInDays);
-    cutoffDate.setHours(0, 0, 0, 0);
+    
+    // Use custom date range for filtering
+    const startDate = customDateRange.start ? new Date(customDateRange.start) : null;
+    const endDate = customDateRange.end ? new Date(customDateRange.end) : null;
+    
+    if (startDate) startDate.setHours(0, 0, 0, 0);
+    if (endDate) endDate.setHours(23, 59, 59, 999);
 
     // Only count orders that are paid or cash (accepted)
     const paidOrders = orders.filter(o => 
       o.payment?.status === 'paid' || o.payment?.method === 'cash'
     );
 
-    const filteredOrders = paidOrders.filter(o => 
-      o.status === 'completed' && 
-      (reportRange === 'daily' 
-        ? new Date(o.createdAt).toDateString() === new Date().toDateString()
-        : new Date(o.createdAt) >= cutoffDate)
-    );
+    const filteredOrders = paidOrders.filter(o => {
+      if (!startDate || !endDate) return o.status === 'completed';
+      const orderDate = new Date(o.createdAt);
+      return o.status === 'completed' && orderDate >= startDate && orderDate <= endDate;
+    });
 
     const revenue = filteredOrders.reduce((acc, o) => acc + o.total, 0);
     const orderCount = filteredOrders.length;
@@ -125,7 +246,7 @@ const AdminDashboard: React.FC = () => {
 
     filteredOrders.forEach(o => o.items.forEach(i => {
       itemCounts[i.name] = (itemCounts[i.name] || 0) + i.quantity;
-      const menuItem = MENU_ITEMS.find(m => m.id === i.id);
+      const menuItem = menuItems.find(m => m.id === i.id);
       if (menuItem) {
         categoryRevenue[menuItem.category] = (categoryRevenue[menuItem.category] || 0) + (i.price * i.quantity);
       }
@@ -141,6 +262,61 @@ const AdminDashboard: React.FC = () => {
     // Active orders are only those that are paid/cash and not completed/cancelled
     const activeOrders = paidOrders.filter(o => !['completed', 'cancelled'].includes(o.status));
 
+    // CHART DATA CALCULATIONS
+
+    // 1. Hourly Orders Distribution (0-23 hours)
+    const hourlyOrders = Array(24).fill(0);
+    filteredOrders.forEach(o => {
+      const hour = new Date(o.createdAt).getHours();
+      hourlyOrders[hour]++;
+    });
+
+    // 2. Daily Revenue Trend (last 7 or 30 days)
+    const daysToShow = reportRange === 'daily' ? 7 : reportRange === 'weekly' ? 7 : 30;
+    const dailyRevenue: { date: string; revenue: number; orders: number }[] = [];
+    for (let i = daysToShow - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const dateStr = date.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
+      const dayOrders = paidOrders.filter(o => {
+        const orderDate = new Date(o.createdAt);
+        orderDate.setHours(0, 0, 0, 0);
+        return orderDate.getTime() === date.getTime() && o.status === 'completed';
+      });
+      dailyRevenue.push({
+        date: dateStr,
+        revenue: dayOrders.reduce((acc, o) => acc + o.total, 0),
+        orders: dayOrders.length
+      });
+    }
+
+    // 3. Delivery Method Distribution
+    const deliveryMethods = { delivery: 0, pickup: 0 };
+    filteredOrders.forEach(o => {
+      if (o.delivery?.type === 'delivery') deliveryMethods.delivery++;
+      else deliveryMethods.pickup++;
+    });
+
+    // 4. Payment Method Distribution
+    const paymentMethods = { card: 0, cash: 0, ideal: 0 };
+    filteredOrders.forEach(o => {
+      if (o.payment?.method === 'card') paymentMethods.card++;
+      else if (o.payment?.method === 'cash') paymentMethods.cash++;
+      else if (o.payment?.method === 'ideal') paymentMethods.ideal++;
+    });
+
+    // 5. Day of Week Distribution
+    const dayOfWeek = Array(7).fill(0);
+    filteredOrders.forEach(o => {
+      const day = new Date(o.createdAt).getDay();
+      dayOfWeek[day]++;
+    });
+
+    // 6. Peak Hours Detection
+    const peakHour = hourlyOrders.indexOf(Math.max(...hourlyOrders));
+    const peakOrders = Math.max(...hourlyOrders);
+
     return { 
       revenue, 
       activeCount: activeOrders.length,
@@ -150,9 +326,323 @@ const AdminDashboard: React.FC = () => {
       btwAmount, 
       netRevenue,
       avgOrderValue,
-      categoryRevenue 
+      categoryRevenue,
+      // Chart data
+      hourlyOrders,
+      dailyRevenue,
+      deliveryMethods,
+      paymentMethods,
+      dayOfWeek,
+      peakHour,
+      peakOrders
     };
-  }, [orders, reportRange]);
+  }, [orders, reportRange, menuItems, customDateRange]);
+
+  // Chart.js initialization and updates
+  useEffect(() => {
+    if (activeTab !== 'analytics') return;
+    if (typeof window === 'undefined' || !(window as any).Chart) return;
+
+    const Chart = (window as any).Chart;
+
+    // Destroy existing charts
+    Object.values(chartInstancesRef.current).forEach((chart: any) => {
+      if (chart && typeof chart.destroy === 'function') chart.destroy();
+    });
+    chartInstancesRef.current = {};
+
+    // Common chart options
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top' as const,
+          labels: {
+            font: { size: 11, family: "'Inter', sans-serif", weight: '600' },
+            padding: 15,
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: 12,
+          titleFont: { size: 13, weight: '600' },
+          bodyFont: { size: 12 },
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          borderWidth: 1,
+          cornerRadius: 8
+        }
+      }
+    };
+
+    // 1. Hourly Orders Chart
+    if (hourlyChartRef.current) {
+      const ctx = hourlyChartRef.current.getContext('2d');
+      if (ctx) {
+        chartInstancesRef.current.hourly = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+            datasets: [{
+              label: 'Zamówienia',
+              data: stats.hourlyOrders,
+              backgroundColor: 'rgba(37, 99, 235, 0.8)',
+              borderColor: 'rgba(37, 99, 235, 1)',
+              borderWidth: 2,
+              borderRadius: 8,
+              hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)'
+            }]
+          },
+          options: {
+            ...commonOptions,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, font: { size: 11 } },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              x: {
+                ticks: { font: { size: 10 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 2. Revenue Trend Chart
+    if (revenueChartRef.current) {
+      const ctx = revenueChartRef.current.getContext('2d');
+      if (ctx) {
+        chartInstancesRef.current.revenue = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: stats.dailyRevenue.map(d => d.date),
+            datasets: [
+              {
+                label: 'Przychód (€)',
+                data: stats.dailyRevenue.map(d => d.revenue),
+                borderColor: 'rgba(16, 185, 129, 1)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(16, 185, 129, 1)'
+              },
+              {
+                label: 'Zamówienia',
+                data: stats.dailyRevenue.map(d => d.orders),
+                borderColor: 'rgba(251, 191, 36, 1)',
+                backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: 'rgba(251, 191, 36, 1)',
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            ...commonOptions,
+            scales: {
+              y: {
+                type: 'linear',
+                position: 'left',
+                beginAtZero: true,
+                ticks: { 
+                  font: { size: 11 },
+                  callback: (value) => `€${value}`
+                },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              y1: {
+                type: 'linear',
+                position: 'right',
+                beginAtZero: true,
+                ticks: { stepSize: 1, font: { size: 11 } },
+                grid: { display: false }
+              },
+              x: {
+                ticks: { font: { size: 10 } },
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 3. Category Pie Chart
+    if (categoryChartRef.current) {
+      const ctx = categoryChartRef.current.getContext('2d');
+      if (ctx) {
+        const categories = Object.keys(stats.categoryRevenue);
+        const revenues = Object.values(stats.categoryRevenue) as number[];
+        chartInstancesRef.current.category = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: categories,
+            datasets: [{
+              data: revenues,
+              backgroundColor: [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(251, 191, 36, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(168, 85, 247, 0.8)',
+                'rgba(236, 72, 153, 0.8)'
+              ],
+              borderColor: '#ffffff',
+              borderWidth: 3,
+              hoverOffset: 15
+            }]
+          },
+          options: {
+            ...commonOptions,
+            cutout: '65%',
+            plugins: {
+              ...commonOptions.plugins,
+              tooltip: {
+                ...commonOptions.plugins.tooltip,
+                callbacks: {
+                  label: (context) => {
+                    const value = context.parsed;
+                    const total = revenues.reduce((a, b) => a + b, 0);
+                    const percentage = ((value / total) * 100).toFixed(1);
+                    return `${context.label}: €${value.toFixed(2)} (${percentage}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 4. Delivery Methods Chart
+    if (deliveryChartRef.current) {
+      const ctx = deliveryChartRef.current.getContext('2d');
+      if (ctx) {
+        chartInstancesRef.current.delivery = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Dostawa', 'Odbiór'],
+            datasets: [{
+              data: [stats.deliveryMethods.delivery, stats.deliveryMethods.pickup],
+              backgroundColor: ['rgba(147, 51, 234, 0.8)', 'rgba(34, 197, 94, 0.8)'],
+              borderColor: '#ffffff',
+              borderWidth: 3,
+              hoverOffset: 10
+            }]
+          },
+          options: {
+            ...commonOptions,
+            plugins: {
+              ...commonOptions.plugins,
+              legend: { display: true, position: 'bottom' as const }
+            }
+          }
+        });
+      }
+    }
+
+    // 5. Payment Methods Chart
+    if (paymentChartRef.current) {
+      const ctx = paymentChartRef.current.getContext('2d');
+      if (ctx) {
+        chartInstancesRef.current.payment = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Karta', 'Gotówka', 'iDEAL'],
+            datasets: [{
+              label: 'Zamówienia',
+              data: [stats.paymentMethods.card, stats.paymentMethods.cash, stats.paymentMethods.ideal],
+              backgroundColor: [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(251, 191, 36, 0.8)'
+              ],
+              borderColor: [
+                'rgba(59, 130, 246, 1)',
+                'rgba(34, 197, 94, 1)',
+                'rgba(251, 191, 36, 1)'
+              ],
+              borderWidth: 2,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            ...commonOptions,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, font: { size: 11 } },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              x: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 6. Weekday Distribution Chart
+    if (weekdayChartRef.current) {
+      const ctx = weekdayChartRef.current.getContext('2d');
+      if (ctx) {
+        const dayNames = ['Niedz.', 'Pon.', 'Wt.', 'Śr.', 'Czw.', 'Pt.', 'Sob.'];
+        chartInstancesRef.current.weekday = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: dayNames,
+            datasets: [{
+              label: 'Zamówienia',
+              data: stats.dayOfWeek,
+              backgroundColor: stats.dayOfWeek.map((_, i) => 
+                i === 5 || i === 6 ? 'rgba(251, 191, 36, 0.8)' : 'rgba(37, 99, 235, 0.8)'
+              ),
+              borderColor: stats.dayOfWeek.map((_, i) => 
+                i === 5 || i === 6 ? 'rgba(251, 191, 36, 1)' : 'rgba(37, 99, 235, 1)'
+              ),
+              borderWidth: 2,
+              borderRadius: 8
+            }]
+          },
+          options: {
+            ...commonOptions,
+            indexAxis: 'y',
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, font: { size: 11 } },
+                grid: { color: 'rgba(0, 0, 0, 0.05)' }
+              },
+              y: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // Cleanup on unmount
+    return () => {
+      Object.values(chartInstancesRef.current).forEach((chart: any) => {
+        if (chart && typeof chart.destroy === 'function') chart.destroy();
+      });
+    };
+  }, [activeTab, stats, reportRange]);
 
   const processedOrders = useMemo(() => {
     // Filter only paid orders or cash orders (accepted for preparation)
@@ -253,10 +743,10 @@ const AdminDashboard: React.FC = () => {
 
         <button 
           onClick={() => setShowReport(true)}
-          className="mt-auto w-full group relative overflow-hidden glass border border-gold-400/20 rounded-2xl p-6 transition-all hover:border-gold-400/50 active:scale-95"
+          className="mt-auto w-full group relative overflow-hidden glass border border-blue-400/30 rounded-2xl p-6 transition-all hover:border-blue-500/50 active:scale-95"
         >
           <div className="text-left relative z-10">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gold-400 mb-0.5">Period Report</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-0.5">Period Report</p>
             <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Financial Insights</p>
           </div>
         </button>
@@ -298,14 +788,14 @@ const AdminDashboard: React.FC = () => {
                     <div 
                       key={order.id}
                       onClick={() => setSelectedOrder(order)}
-                      className={`group relative glass rounded-[2.5rem] p-8 border transition-all duration-500 cursor-pointer overflow-hidden ${
-                        selectedOrder?.id === order.id ? 'border-gold-400/40 bg-gold-400/[0.02]' : 'border-zinc-900 hover:border-zinc-800'
+                      className={`group relative glass rounded-[2.5rem] p-8 border bg-white/80 transition-all duration-500 cursor-pointer overflow-hidden ${
+                        selectedOrder?.id === order.id ? 'border-gold-400/40 bg-gold-400/[0.02]' : 'border-blue-200 hover:border-blue-300'
                       }`}
                     >
                       <div className="flex flex-col md:flex-row justify-between gap-8 items-center">
                         <div className="flex-1 space-y-4">
                           <div className="flex items-center gap-4">
-                            <span className="text-[10px] font-mono font-bold text-zinc-600 bg-zinc-900/50 px-3 py-1 rounded-lg">#{order.id.split('-')[1]}</span>
+                            <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-100 px-3 py-1 rounded-lg">#{order.id.split('-')[1]}</span>
                             <div className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-[0.2em] border ${getStatusColor(order.status)}`}>
                               {t.orderStatus[order.status]}
                             </div>
@@ -323,8 +813,8 @@ const AdminDashboard: React.FC = () => {
 
               {/* Order Detail Sidebar */}
               {selectedOrder && (
-                <div className="glass rounded-[3rem] p-10 border border-gold-400/20 sticky top-0 h-fit space-y-10 animate-reveal">
-                  <div className="flex justify-between items-start border-b border-zinc-800 pb-6">
+                <div className="glass rounded-[3rem] p-10 border border-blue-200 bg-white/80 sticky top-0 h-fit space-y-10 animate-reveal">
+                  <div className="flex justify-between items-start border-b border-blue-200 pb-6">
                     <div>
                       <h4 className="text-3xl font-serif font-bold text-gray-900">Order Details</h4>
                       <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Order ID: {selectedOrder.id}</p>
@@ -348,7 +838,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="pt-8 border-t border-zinc-800 space-y-8">
+                  <div className="pt-8 border-t border-blue-200 space-y-8">
                      <div className="space-y-2">
                         <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Customer Info</p>
                         <p className="text-gray-900 text-sm font-medium">{selectedOrder.customer.address}</p>
@@ -360,6 +850,56 @@ const AdminDashboard: React.FC = () => {
                         <span className="text-4xl font-serif font-bold text-amber-500">€{selectedOrder.total.toFixed(2)}</span>
                      </div>
 
+                     {/* Status Update Buttons */}
+                     {selectedOrder.status !== 'completed' && selectedOrder.status !== 'cancelled' && (
+                       <div className="space-y-3">
+                         <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Update Status</p>
+                         <div className="grid grid-cols-2 gap-3">
+                           {selectedOrder.status === 'pending' && (
+                             <button
+                               onClick={() => updateOrderStatus(selectedOrder.id, 'preparing')}
+                               className="col-span-2 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                             >
+                               <span>🍳</span>
+                               Start Preparing
+                             </button>
+                           )}
+                           
+                           {selectedOrder.status === 'preparing' && (
+                             <>
+                               {selectedOrder.deliveryMethod === 'delivery' ? (
+                                 <button
+                                   onClick={() => updateOrderStatus(selectedOrder.id, 'delivery')}
+                                   className="col-span-2 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                                 >
+                                   <span>🚗</span>
+                                   Out for Delivery
+                                 </button>
+                               ) : (
+                                 <button
+                                   onClick={() => updateOrderStatus(selectedOrder.id, 'ready')}
+                                   className="col-span-2 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                                 >
+                                   <span>✓</span>
+                                   Ready for Pickup
+                                 </button>
+                               )}
+                             </>
+                           )}
+                           
+                           {(selectedOrder.status === 'ready' || selectedOrder.status === 'delivery') && (
+                             <button
+                               onClick={() => updateOrderStatus(selectedOrder.id, 'completed')}
+                               className="col-span-2 py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                             >
+                               <span>✓</span>
+                               Mark as Completed
+                             </button>
+                           )}
+                         </div>
+                       </div>
+                     )}
+
                      <div className="grid grid-cols-1 gap-4">
                         <button 
                           onClick={() => setPrintingOrder(selectedOrder)}
@@ -367,15 +907,123 @@ const AdminDashboard: React.FC = () => {
                         >
                           Print Receipt
                         </button>
-                        {selectedOrder.status !== 'completed' && selectedOrder.status !== 'cancelled' && (
-                          <button 
-                            onClick={() => updateOrderStatus(selectedOrder.id, 'completed')}
-                            className="w-full py-5 gold-bg text-zinc-950 rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-xl shadow-gold-400/10 hover:scale-[1.02] transition-all"
-                          >
-                            Mark as Completed
-                          </button>
-                        )}
                      </div>
+
+                     {/* Staff Notes Section */}
+                     <div className="border-t border-blue-200 pt-8 space-y-6">
+                       <div className="flex items-center justify-between">
+                         <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold flex items-center gap-2">
+                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                           </svg>
+                           Staff Notes
+                         </p>
+                         <span className="text-[9px] text-zinc-400 font-bold">{selectedOrder.staffNotes?.length || 0} notes</span>
+                       </div>
+
+                       {/* Existing Notes */}
+                       {selectedOrder.staffNotes && selectedOrder.staffNotes.length > 0 && (
+                         <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar">
+                           {selectedOrder.staffNotes.map((note) => (
+                             <div key={note.id} className="p-4 bg-amber-50/50 rounded-xl border border-amber-200">
+                               <div className="flex items-start justify-between gap-3 mb-2">
+                                 <span className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">{note.author}</span>
+                                 <span className="text-[9px] text-zinc-400">
+                                   {new Date(note.timestamp).toLocaleString('pl-PL', { 
+                                     day: '2-digit', 
+                                     month: '2-digit', 
+                                     hour: '2-digit', 
+                                     minute: '2-digit' 
+                                   })}
+                                 </span>
+                               </div>
+                               <p className="text-sm text-gray-800 leading-relaxed">{note.text}</p>
+                             </div>
+                           ))}
+                         </div>
+                       )}
+
+                       {/* Add New Note */}
+                       <div className="space-y-3">
+                         <textarea
+                           value={newStaffNote}
+                           onChange={(e) => setNewStaffNote(e.target.value)}
+                           placeholder="Add internal note about this order..."
+                           rows={3}
+                           className="w-full bg-white/70 border border-blue-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:border-blue-500 outline-none transition-all resize-none"
+                         />
+                         <div className="flex gap-3">
+                           <input
+                             type="text"
+                             value={staffName}
+                             onChange={(e) => setStaffName(e.target.value)}
+                             placeholder="Your name"
+                             className="flex-1 bg-white/70 border border-blue-300 rounded-xl px-4 py-2 text-sm text-gray-900 focus:border-blue-500 outline-none transition-all"
+                           />
+                           <button
+                             onClick={() => {
+                               if (newStaffNote.trim() && staffName.trim()) {
+                                 addStaffNote(selectedOrder.id, newStaffNote.trim(), staffName.trim());
+                                 setNewStaffNote('');
+                               }
+                             }}
+                             disabled={!newStaffNote.trim() || !staffName.trim()}
+                             className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                           >
+                             Add Note
+                           </button>
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Driver Assignment - Only for delivery orders */}
+                     {selectedOrder.delivery.type === 'delivery' && (
+                       <div className="border-t border-blue-200 pt-8 space-y-4">
+                         <div className="flex items-center gap-2">
+                           <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                           </svg>
+                           <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">Assign Driver</p>
+                         </div>
+                         
+                         <select
+                           value={selectedOrder.assignedDriver || ''}
+                           onChange={(e) => assignDriver(selectedOrder.id, e.target.value || null)}
+                           className="w-full bg-white/70 border border-blue-300 rounded-xl px-4 py-3 text-sm text-gray-900 focus:border-blue-500 outline-none transition-all"
+                           aria-label="Przypisz kierowcę do zamówienia"
+                         >
+                           <option value="">-- Nie przypisano --</option>
+                           {drivers
+                             .filter(d => d.status !== 'offline')
+                             .map(driver => (
+                               <option key={driver.id} value={driver.id}>
+                                 {driver.name} ({driver.status === 'available' ? '✓ Dostępny' : `🚗 ${driver.activeDeliveries} dostaw`})
+                               </option>
+                             ))}
+                         </select>
+                         
+                         {selectedOrder.assignedDriver && (
+                           <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                                 {drivers.find(d => d.id === selectedOrder.assignedDriver)?.name.charAt(0)}
+                               </div>
+                               <div className="flex-1">
+                                 <p className="text-sm font-bold text-gray-900">
+                                   {drivers.find(d => d.id === selectedOrder.assignedDriver)?.name}
+                                 </p>
+                                 <p className="text-xs text-gray-600">
+                                   {drivers.find(d => d.id === selectedOrder.assignedDriver)?.phone}
+                                 </p>
+                               </div>
+                               <div className="text-xs font-bold text-green-600 uppercase tracking-wider">
+                                 Przypisany
+                               </div>
+                             </div>
+                           </div>
+                         )}
+                       </div>
+                     )}
                   </div>
                 </div>
               )}
@@ -385,26 +1033,89 @@ const AdminDashboard: React.FC = () => {
 
         {activeTab === 'analytics' && (
           <div className="max-w-7xl mx-auto space-y-16 animate-reveal">
-            <div className="flex justify-between items-end">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
               <div>
                 <h2 className="text-6xl font-serif font-bold text-gray-900 mb-2">Metrics</h2>
                 <p className="text-zinc-500 uppercase tracking-[0.5em] text-[10px] font-bold">Comprehensive Performance</p>
               </div>
-              <div className="flex gap-2 glass p-1.5 rounded-2xl border border-zinc-900">
-                {(['daily', 'weekly', 'monthly'] as ReportRange[]).map((r) => (
+              
+              {/* Date Range Picker */}
+              <div className="flex flex-col gap-4 w-full md:w-auto">
+                {/* Quick Select Buttons */}
+                <div className="flex gap-2 glass p-1.5 rounded-2xl border border-zinc-900">
                   <button
-                    key={r}
-                    onClick={() => setReportRange(r)}
-                    className={`px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
-                      reportRange === r ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                    onClick={() => {
+                      const today = new Date();
+                      setCustomDateRange({ start: today, end: today });
+                    }}
+                    className="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all text-gray-600 hover:text-gray-900 hover:bg-white/50"
                   >
-                    {r}
+                    Dziś
                   </button>
-                ))}
+                  <button
+                    onClick={() => {
+                      const today = new Date();
+                      const sevenDaysAgo = new Date(today);
+                      sevenDaysAgo.setDate(today.getDate() - 7);
+                      setCustomDateRange({ start: sevenDaysAgo, end: today });
+                    }}
+                    className="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all text-gray-600 hover:text-gray-900 hover:bg-white/50"
+                  >
+                    7 Dni
+                  </button>
+                  <button
+                    onClick={() => {
+                      const today = new Date();
+                      const thirtyDaysAgo = new Date(today);
+                      thirtyDaysAgo.setDate(today.getDate() - 30);
+                      setCustomDateRange({ start: thirtyDaysAgo, end: today });
+                    }}
+                    className="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all text-gray-600 hover:text-gray-900 hover:bg-white/50"
+                  >
+                    30 Dni
+                  </button>
+                  <button
+                    onClick={() => setCustomDateRange({ start: null, end: null })}
+                    className="px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all text-gray-600 hover:text-gray-900 hover:bg-white/50"
+                  >
+                    Wszystko
+                  </button>
+                </div>
+                
+                {/* Custom Date Inputs */}
+                <div className="flex gap-3 items-center glass p-3 rounded-2xl border border-blue-300">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">Od:</label>
+                    <input
+                      type="date"
+                      aria-label="Data początkowa"
+                      value={customDateRange.start ? customDateRange.start.toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : null;
+                        setCustomDateRange(prev => ({ ...prev, start: date }));
+                      }}
+                      className="bg-white/70 border border-blue-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <span className="text-gray-400">→</span>
+                  <div className="flex items-center gap-2">
+                    <label className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">Do:</label>
+                    <input
+                      type="date"
+                      aria-label="Data końcowa"
+                      value={customDateRange.end ? customDateRange.end.toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : null;
+                        setCustomDateRange(prev => ({ ...prev, end: date }));
+                      }}
+                      className="bg-white/70 border border-blue-300 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-
+            
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
                {[
                  { label: 'Revenue', value: `€${stats.revenue.toFixed(0)}`, color: 'gold' },
@@ -412,15 +1123,106 @@ const AdminDashboard: React.FC = () => {
                  { label: 'Avg Order Value', value: `€${stats.avgOrderValue.toFixed(2)}`, color: 'blue' },
                  { label: 'Dishes Sold', value: stats.totalDishes, color: 'amber' }
                ].map((card, i) => (
-                 <div key={i} className="glass p-10 rounded-[3rem] border border-zinc-900 group hover:border-gold-400/30 transition-all">
+                 <div key={i} className="glass p-10 rounded-[3rem] border border-blue-200 bg-white/80 group hover:border-gold-400/30 transition-all">
                     <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold mb-6 group-hover:text-zinc-400 transition-colors">{card.label}</p>
                     <span className={`text-5xl font-serif font-bold ${card.color === 'gold' ? 'text-amber-500' : 'text-gray-900'}`}>{card.value}</span>
                  </div>
                ))}
             </div>
 
+            {/* Peak Hours Insight Card */}
+            {stats.peakOrders > 0 && (
+              <div className="glass p-8 rounded-[3rem] border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] uppercase tracking-widest text-amber-700 font-bold mb-1">Godzina Szczytu</p>
+                    <p className="text-2xl font-serif font-bold text-gray-900">
+                      {stats.peakHour}:00 - {stats.peakOrders} zamówień
+                    </p>
+                    <p className="text-sm text-amber-600 mt-1">Najwyższa aktywność w tym okresie</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+              {/* Hourly Orders Chart */}
+              <div className="glass p-10 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-6 animate-reveal">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-2xl font-serif font-bold text-gray-900">Zamówienia według godzin</h4>
+                  <div className="px-4 py-2 bg-blue-100 rounded-xl">
+                    <span className="text-xs font-bold text-blue-600">24h</span>
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-500">Rozkład zamówień w ciągu dnia</p>
+                <div className="h-[300px]">
+                  <canvas ref={hourlyChartRef}></canvas>
+                </div>
+              </div>
+
+              {/* Revenue Trend Chart */}
+              <div className="glass p-10 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-6 animate-reveal stagger-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-2xl font-serif font-bold text-gray-900">Trend przychodu</h4>
+                  <div className="px-4 py-2 bg-emerald-100 rounded-xl">
+                    <span className="text-xs font-bold text-emerald-600">{reportRange === 'daily' ? '7 dni' : reportRange === 'weekly' ? '7 dni' : '30 dni'}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-zinc-500">Przychód i liczba zamówień</p>
+                <div className="h-[300px]">
+                  <canvas ref={revenueChartRef}></canvas>
+                </div>
+              </div>
+
+              {/* Category Distribution Chart */}
+              <div className="glass p-10 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-6 animate-reveal stagger-2">
+                <h4 className="text-2xl font-serif font-bold text-gray-900">Przychód według kategorii</h4>
+                <p className="text-sm text-zinc-500">Podział przychodów na kategorie menu</p>
+                <div className="h-[300px] flex items-center justify-center">
+                  <canvas ref={categoryChartRef}></canvas>
+                </div>
+              </div>
+
+              {/* Weekday Distribution Chart */}
+              <div className="glass p-10 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-6 animate-reveal stagger-3">
+                <h4 className="text-2xl font-serif font-bold text-gray-900">Zamówienia według dni</h4>
+                <p className="text-sm text-zinc-500">Rozkład zamówień w tygodniu</p>
+                <div className="h-[300px]">
+                  <canvas ref={weekdayChartRef}></canvas>
+                </div>
+              </div>
+            </div>
+
+            {/* Smaller Charts Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {/* Delivery Methods Chart */}
+              <div className="glass p-10 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-6 animate-reveal stagger-4">
+                <h4 className="text-2xl font-serif font-bold text-gray-900">Metody dostawy</h4>
+                <p className="text-sm text-zinc-500">Podział na dostaw i odbiór własny</p>
+                <div className="h-[250px] flex items-center justify-center">
+                  <canvas ref={deliveryChartRef}></canvas>
+                </div>
+              </div>
+
+              {/* Payment Methods Chart */}
+              <div className="glass p-10 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-6 animate-reveal stagger-5">
+                <h4 className="text-2xl font-serif font-bold text-gray-900">Metody płatności</h4>
+                <p className="text-sm text-zinc-500">Preferowane sposoby płatności</p>
+                <div className="h-[250px]">
+                  <canvas ref={paymentChartRef}></canvas>
+                </div>
+              </div>
+            </div>
+
+            {/* Tables Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-               <div className="glass p-12 rounded-[3.5rem] border border-zinc-900 space-y-10">
+               <div className="glass p-12 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-10 animate-reveal stagger-6">
                   <h4 className="text-2xl font-serif font-bold text-gray-900">Revenue by Category</h4>
                   <div className="space-y-8">
                      {Object.entries(stats.categoryRevenue).map(([cat, rev]) => {
@@ -432,8 +1234,8 @@ const AdminDashboard: React.FC = () => {
                                <span className="text-zinc-400">{cat}</span>
                                <span className="text-amber-500">€{revNum.toFixed(2)} ({percentage.toFixed(0)}%)</span>
                             </div>
-                            <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
-                               <div className={`h-full gold-bg transition-all duration-1000 w-[${Math.round(percentage)}%]`} />
+                            <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
+                               <div className="h-full bg-gradient-to-r from-blue-600 to-blue-700 transition-all duration-1000" style={{ width: Math.round(percentage) + '%' }} />
                             </div>
                          </div>
                        );
@@ -441,13 +1243,13 @@ const AdminDashboard: React.FC = () => {
                   </div>
                </div>
 
-               <div className="glass p-12 rounded-[3.5rem] border border-zinc-900 space-y-10">
+               <div className="glass p-12 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-10 animate-reveal stagger-7">
                   <h4 className="text-2xl font-serif font-bold text-gray-900">Top 5 Bestsellers</h4>
                   <div className="space-y-4">
                      {stats.topItems.map(([name, count], i) => (
-                        <div key={i} className="flex justify-between items-center p-5 bg-zinc-950/50 rounded-2xl border border-zinc-900 hover:border-gold-400/20 transition-all">
+                        <div key={i} className="flex justify-between items-center p-5 bg-blue-50/50 rounded-2xl border border-blue-200 hover:border-gold-400/20 transition-all">
                            <div className="flex items-center gap-4">
-                              <span className="w-8 h-8 rounded-lg bg-zinc-900 flex items-center justify-center text-[10px] font-bold text-gold-400">#{i+1}</span>
+                              <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white">#{i+1}</span>
                               <span className="text-sm text-gray-900 font-medium">{name}</span>
                            </div>
                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{count} Units</span>
@@ -469,28 +1271,56 @@ const AdminDashboard: React.FC = () => {
                   {menuItems.length} items • {menuItems.filter(m => m.isAvailable !== false).length} available
                 </p>
               </div>
-              <div className="flex gap-4 w-full md:w-auto">
-                <input 
-                  type="text" 
-                  placeholder="Search menu..." 
-                  value={menuSearchTerm}
-                  onChange={(e) => setMenuSearchTerm(e.target.value)}
-                  className="bg-zinc-900/50 border border-zinc-800 rounded-2xl px-6 py-4 text-sm text-white outline-none focus:border-gold-400/50 transition-all placeholder:text-zinc-700 w-full md:w-64"
-                />
-                <select
-                  value={menuCategoryFilter}
-                  title="Filter by category"
-                  onChange={(e) => setMenuCategoryFilter(e.target.value)}
-                  className="bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 text-sm text-gray-900 outline-none focus:border-blue-500 transition-all"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="mains">Mains</option>
-                  <option value="starters_cold">Cold Starters</option>
-                  <option value="starters_warm">Warm Starters</option>
-                  <option value="salads">Salads</option>
-                  <option value="desserts">Desserts</option>
-                </select>
-              </div>
+              <button
+                onClick={() => {
+                  // Initialize new menu item with empty multilingual fields
+                  const newItem: MenuItem = {
+                    id: 'temp-new',
+                    category: 'mains',
+                    price: 0,
+                    image: '',
+                    names: { nl: '', el: '', tr: '', ar: '', bg: '', pl: '' },
+                    descriptions: { nl: '', el: '', tr: '', ar: '', bg: '', pl: '' },
+                    isAvailable: true,
+                    isPopular: false,
+                    isNew: true,
+                    isVegetarian: false,
+                    isVegan: false,
+                    isGlutenFree: false
+                  };
+                  setEditingMenuItem(newItem);
+                  setIsAddingNewItem(true);
+                }}
+                className="px-8 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl text-[11px] font-bold uppercase tracking-[0.3em] shadow-lg hover:scale-[1.02] transition-all flex items-center gap-3"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                Add New Dish
+              </button>
+            </div>
+            
+            <div className="flex gap-4 w-full">
+              <input 
+                type="text" 
+                placeholder="Search menu..." 
+                value={menuSearchTerm}
+                onChange={(e) => setMenuSearchTerm(e.target.value)}
+                className="bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 text-sm text-gray-900 outline-none focus:border-blue-500 transition-all placeholder:text-gray-400 flex-1"
+              />
+              <select
+                value={menuCategoryFilter}
+                title="Filter by category"
+                onChange={(e) => setMenuCategoryFilter(e.target.value)}
+                className="bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 text-sm text-gray-900 outline-none focus:border-blue-500 transition-all"
+              >
+                <option value="all">All Categories</option>
+                <option value="mains">Mains</option>
+                <option value="starters_cold">Cold Starters</option>
+                <option value="starters_warm">Warm Starters</option>
+                <option value="salads">Salads</option>
+                <option value="desserts">Desserts</option>
+              </select>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -538,22 +1368,31 @@ const AdminDashboard: React.FC = () => {
                         <span className="text-2xl font-serif font-bold text-amber-500">€{item.price.toFixed(2)}</span>
                       </div>
                       <p className="text-zinc-500 text-sm line-clamp-2">{item.descriptions[language]}</p>
-                      <div className="flex gap-3 pt-2">
+                      <div className="grid grid-cols-2 gap-3 pt-2">
                         <button
                           onClick={() => toggleAvailability(item.id)}
-                          className={`flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                          className={`py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
                             item.isAvailable !== false 
                               ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20' 
                               : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
                           }`}
                         >
-                          {item.isAvailable !== false ? 'Mark Unavailable' : 'Mark Available'}
+                          {item.isAvailable !== false ? 'Hide' : 'Show'}
                         </button>
                         <button
                           onClick={() => setEditingMenuItem(item)}
-                          className="px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest glass border border-blue-300 text-gray-700 hover:text-gray-900 hover:border-blue-500 transition-all"
+                          className="py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest glass border border-blue-300 text-gray-700 hover:text-gray-900 hover:border-blue-500 transition-all"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(item.id)}
+                          className="col-span-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete Item
                         </button>
                       </div>
                     </div>
@@ -572,9 +1411,9 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Restaurant Info */}
-            <div className="glass rounded-[3rem] border border-zinc-800 p-10 space-y-8">
-              <h3 className="text-2xl font-serif font-bold text-white flex items-center gap-4">
-                <svg className="w-6 h-6 text-gold-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
+              <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
                 Restaurant Information
@@ -624,9 +1463,9 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Opening Hours */}
-            <div className="glass rounded-[3rem] border border-zinc-800 p-10 space-y-8">
+            <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
               <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
-                <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Opening Hours
@@ -635,7 +1474,7 @@ const AdminDashboard: React.FC = () => {
                 {Object.entries(settings.openingHours).map(([day, hoursData]) => {
                   const hours = hoursData as { open: string; close: string; closed?: boolean };
                   return (
-                  <div key={day} className="flex items-center gap-6 p-4 bg-zinc-900/30 rounded-2xl">
+                  <div key={day} className="flex items-center gap-6 p-4 bg-blue-50/50 rounded-2xl">
                     <span className="w-28 text-sm font-medium text-gray-900 capitalize">{day}</span>
                     <div className="flex items-center gap-3 flex-1">
                       <input
@@ -648,7 +1487,7 @@ const AdminDashboard: React.FC = () => {
                             [day]: { ...hours, open: e.target.value }
                           }
                         })}
-                        className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:border-gold-400/50 outline-none"
+                        className="bg-white border border-blue-300 rounded-lg px-3 py-2 text-gray-900 text-sm focus:border-blue-500 outline-none"
                       />
                       <span className="text-zinc-600">-</span>
                       <input
@@ -661,7 +1500,7 @@ const AdminDashboard: React.FC = () => {
                             [day]: { ...hours, close: e.target.value }
                           }
                         })}
-                        className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white text-sm focus:border-gold-400/50 outline-none"
+                        className="bg-white border border-blue-300 rounded-lg px-3 py-2 text-gray-900 text-sm focus:border-blue-500 outline-none"
                       />
                     </div>
                     <button
@@ -685,10 +1524,67 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Delivery Settings */}
-            <div className="glass rounded-[3rem] border border-zinc-800 p-10 space-y-8">
+            {/* Driver Management */}
+            <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
               <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
-                <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                </svg>
+                Driver Management
+              </h3>
+              
+              <div className="space-y-4">
+                {drivers.map(driver => (
+                  <div key={driver.id} className="bg-white border border-blue-200 rounded-2xl p-6 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                        driver.status === 'available' ? 'bg-green-500' : 
+                        driver.status === 'busy' ? 'bg-amber-500' : 
+                        'bg-gray-400'
+                      }`}>
+                        {driver.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{driver.name}</p>
+                        <p className="text-sm text-gray-600">{driver.phone}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {driver.activeDeliveries > 0 ? `${driver.activeDeliveries} aktywnych dostaw` : 'Brak aktywnych dostaw'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={driver.status}
+                        onChange={(e) => updateDriverStatus(driver.id, e.target.value as any)}
+                        aria-label={`Zmień status kierowcy ${driver.name}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border-2 outline-none transition-all ${
+                          driver.status === 'available' ? 'bg-green-50 border-green-300 text-green-700' :
+                          driver.status === 'busy' ? 'bg-amber-50 border-amber-300 text-amber-700' :
+                          'bg-gray-50 border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        <option value="available">✓ Dostępny</option>
+                        <option value="busy">🚗 Zajęty</option>
+                        <option value="offline">⏸ Offline</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="pt-4 border-t border-blue-200">
+                <p className="text-xs text-gray-500 mb-4">
+                  💡 <strong>Wskazówka:</strong> Status "Zajęty" jest automatycznie ustawiany gdy kierowca ma przypisane dostawy. 
+                  Status "Offline" ukrywa kierowcę z listy przypisań.
+                </p>
+              </div>
+            </div>
+
+            {/* Delivery Settings */}
+            <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
+              <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
                 </svg>
                 Delivery Settings
@@ -737,9 +1633,9 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Payment Methods */}
-            <div className="glass rounded-[3rem] border border-zinc-800 p-10 space-y-8">
+            <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
               <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
-                <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
                 Payment Methods
@@ -759,7 +1655,7 @@ const AdminDashboard: React.FC = () => {
                     className={`p-6 rounded-2xl border transition-all flex flex-col items-center gap-3 ${
                       settings.payments[method.key]
                         ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                        : 'bg-zinc-900/30 border-zinc-800 text-zinc-500'
+                        : 'bg-gray-100 border-gray-300 text-zinc-500'
                     }`}
                   >
                     <span className="text-3xl">{method.icon}</span>
@@ -775,15 +1671,15 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Notifications */}
-            <div className="glass rounded-[3rem] border border-zinc-800 p-10 space-y-8">
+            <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
               <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
-                <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
                 Notifications
               </h3>
               <div className="space-y-6">
-                <div className="flex items-center justify-between p-5 bg-zinc-900/30 rounded-2xl">
+                <div className="flex items-center justify-between p-5 bg-blue-50/50 rounded-2xl">
                   <div>
                     <p className="text-gray-900 font-medium">Sound Alerts</p>
                     <p className="text-zinc-500 text-sm">Play sound when new order arrives</p>
@@ -795,8 +1691,10 @@ const AdminDashboard: React.FC = () => {
                         notifications: { ...settings.notifications, soundEnabled: !audioAlertsEnabled }
                       });
                     }}
+                    aria-label="Toggle sound alerts"
+                    title="Toggle sound alerts"
                     className={`w-14 h-8 rounded-full transition-all relative ${
-                      audioAlertsEnabled ? 'bg-gold-400' : 'bg-zinc-700'
+                      audioAlertsEnabled ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-all ${
@@ -804,17 +1702,19 @@ const AdminDashboard: React.FC = () => {
                     }`} />
                   </button>
                 </div>
-                <div className="flex items-center justify-between p-5 bg-zinc-900/30 rounded-2xl">
+                <div className="flex items-center justify-between p-5 bg-blue-50/50 rounded-2xl">
                   <div>
-                    <p className="text-white font-medium">Email Notifications</p>
+                    <p className="text-gray-900 font-medium">Email Notifications</p>
                     <p className="text-zinc-500 text-sm">Receive email for new orders</p>
                   </div>
                   <button
                     onClick={() => updateSettings({
                       notifications: { ...settings.notifications, emailEnabled: !settings.notifications.emailEnabled }
                     })}
+                    aria-label="Toggle email notifications"
+                    title="Toggle email notifications"
                     className={`w-14 h-8 rounded-full transition-all relative ${
-                      settings.notifications.emailEnabled ? 'bg-gold-400' : 'bg-zinc-700'
+                      settings.notifications.emailEnabled ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
                   >
                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-all ${
@@ -828,81 +1728,312 @@ const AdminDashboard: React.FC = () => {
         )}
       </main>
 
-      {/* Edit Menu Item Modal */}
-      {editingMenuItem && (
+      {/* Edit/Add Menu Item Modal */}
+      {(editingMenuItem || isAddingNewItem) && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-zinc-950/95 backdrop-blur-2xl" onClick={() => setEditingMenuItem(null)} />
-          <div className="relative w-full max-w-2xl glass rounded-[3rem] border border-gold-400/20 shadow-3xl overflow-hidden animate-reveal p-10 space-y-8 max-h-[90vh] overflow-y-auto">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => {
+            setEditingMenuItem(null);
+            setIsAddingNewItem(false);
+          }} />
+          <div className="relative w-full max-w-4xl glass rounded-[3rem] border border-blue-400/20 shadow-3xl animate-reveal p-10 space-y-8 max-h-[90vh] overflow-y-auto bg-white/95">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-3xl font-serif font-bold text-white mb-2">Edit Menu Item</h3>
-                <p className="text-zinc-500 text-[10px] uppercase tracking-[0.3em] font-bold">{editingMenuItem.id}</p>
+                <h3 className="text-4xl font-serif font-bold text-gray-900 mb-2">
+                  {isAddingNewItem ? '➕ Add New Dish' : '✏️ Edit Menu Item'}
+                </h3>
+                {editingMenuItem && (
+                  <p className="text-zinc-500 text-[10px] uppercase tracking-[0.3em] font-bold">ID: {editingMenuItem.id}</p>
+                )}
               </div>
-              <button onClick={() => setEditingMenuItem(null)} title="Close" aria-label="Close" className="w-10 h-10 rounded-full glass border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-white transition-all">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <button 
+                onClick={() => {
+                  setEditingMenuItem(null);
+                  setIsAddingNewItem(false);
+                }} 
+                title="Close" 
+                aria-label="Close" 
+                className="w-12 h-12 rounded-full glass border border-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-900 hover:border-gray-400 transition-all"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
+              {/* Image Upload */}
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-zinc-500 mb-2">Price (€)</label>
-                <input
-                  type="number"
-                  step="0.50"
-                  value={editingMenuItem.price}
-                  onChange={(e) => {
-                    const newPrice = parseFloat(e.target.value);
-                    setEditingMenuItem({ ...editingMenuItem, price: newPrice });
+                <label className="block text-[10px] uppercase tracking-widest text-gray-700 mb-3 font-bold">📸 Dish Image</label>
+                <div className="space-y-4">
+                  {/* Image Preview */}
+                  {editingMenuItem?.image && (
+                    <div className="relative w-full h-64 rounded-2xl overflow-hidden border-2 border-gray-200">
+                      <img 
+                        src={editingMenuItem.image} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => {
+                          if (editingMenuItem) {
+                            setEditingMenuItem({ ...editingMenuItem, image: '' });
+                          }
+                        }}
+                        aria-label="Remove image"
+                        title="Remove image"
+                        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Upload Button */}
+                  <div className="flex gap-4">
+                    <label className="flex-1 cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                      <div className={`w-full py-4 px-6 rounded-xl border-2 border-dashed transition-all text-center ${
+                        uploadingImage 
+                          ? 'border-gray-300 bg-gray-100 cursor-wait' 
+                          : 'border-blue-400 bg-blue-50 hover:bg-blue-100 hover:border-blue-500'
+                      }`}>
+                        <div className="flex flex-col items-center gap-2">
+                          {uploadingImage ? (
+                            <>
+                              <svg className="w-8 h-8 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span className="text-sm font-medium text-gray-600">Uploading...</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                              </svg>
+                              <span className="text-sm font-bold text-blue-600">
+                                {editingMenuItem?.image ? 'Change Image' : 'Upload Image'}
+                              </span>
+                              <span className="text-xs text-gray-500">Click to browse • Max 5MB</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+
+                    {/* Or use URL */}
+                    {!editingMenuItem?.image && (
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="Or paste image URL"
+                          value={editingMenuItem?.image || ''}
+                          onChange={(e) => {
+                            if (editingMenuItem) {
+                              setEditingMenuItem({ ...editingMenuItem, image: e.target.value });
+                            }
+                          }}
+                          className="w-full h-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none transition-all"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Category & Price */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="category-select" className="block text-[10px] uppercase tracking-widest text-gray-700 mb-3 font-bold">📁 Category</label>
+                  <select
+                    id="category-select"
+                    aria-label="Select category"
+                    title="Select menu item category"
+                    value={editingMenuItem?.category || 'mains'}
+                    onChange={(e) => {
+                      if (editingMenuItem) {
+                        setEditingMenuItem({ ...editingMenuItem, category: e.target.value as any });
+                      }
+                    }}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none transition-all"
+                  >
+                    <option value="mains">Mains</option>
+                    <option value="starters_cold">Cold Starters</option>
+                    <option value="starters_warm">Warm Starters</option>
+                    <option value="salads">Salads</option>
+                    <option value="desserts">Desserts</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="price-input" className="block text-[10px] uppercase tracking-widest text-gray-700 mb-3 font-bold">💰 Price (€)</label>
+                  <input
+                    id="price-input"
+                    type="number"
+                    step="0.50"
+                    min="0"
+                    aria-label="Price in euros"
+                    title="Price in euros"
+                    placeholder="0.00"
+                    value={editingMenuItem?.price || 0}
+                    onChange={(e) => {
+                      if (editingMenuItem) {
+                        setEditingMenuItem({ ...editingMenuItem, price: parseFloat(e.target.value) || 0 });
+                      }
+                    }}
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none transition-all text-2xl font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Multilingual Names */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-700 mb-3 font-bold">🌐 Names (All Languages)</label>
+                <div className="grid grid-cols-2 gap-4">
+                  {(['nl', 'el', 'tr', 'ar', 'bg', 'pl'] as Language[]).map(lang => (
+                    <div key={lang}>
+                      <label className="block text-[9px] text-gray-500 mb-1 uppercase">{lang === 'nl' ? '🇳🇱 Dutch' : lang === 'el' ? '🇬🇷 Greek' : lang === 'tr' ? '🇹🇷 Turkish' : lang === 'ar' ? '🇦🇪 Arabic' : lang === 'bg' ? '🇧🇬 Bulgarian' : '🇵🇱 Polish'}</label>
+                      <input
+                        type="text"
+                        placeholder={`Name in ${lang}`}
+                        value={editingMenuItem?.names?.[lang] || ''}
+                        onChange={(e) => {
+                          if (editingMenuItem) {
+                            setEditingMenuItem({ 
+                              ...editingMenuItem, 
+                              names: { ...editingMenuItem.names, [lang]: e.target.value }
+                            });
+                          }
+                        }}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm focus:border-blue-400 outline-none transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multilingual Descriptions */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-700 mb-3 font-bold">📝 Descriptions (All Languages)</label>
+                <div className="space-y-4">
+                  {(['nl', 'el', 'tr', 'ar', 'bg', 'pl'] as Language[]).map(lang => (
+                    <div key={lang}>
+                      <label className="block text-[9px] text-gray-500 mb-1 uppercase">{lang === 'nl' ? '🇳🇱 Dutch' : lang === 'el' ? '🇬🇷 Greek' : lang === 'tr' ? '🇹🇷 Turkish' : lang === 'ar' ? '🇦🇪 Arabic' : lang === 'bg' ? '🇧🇬 Bulgarian' : '🇵🇱 Polish'}</label>
+                      <textarea
+                        placeholder={`Description in ${lang}`}
+                        value={editingMenuItem?.descriptions?.[lang] || ''}
+                        onChange={(e) => {
+                          if (editingMenuItem) {
+                            setEditingMenuItem({ 
+                              ...editingMenuItem, 
+                              descriptions: { ...editingMenuItem.descriptions, [lang]: e.target.value }
+                            });
+                          }
+                        }}
+                        rows={2}
+                        className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm focus:border-blue-400 outline-none transition-all resize-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Flags Grid */}
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-700 mb-3 font-bold">🏷️ Tags & Properties</label>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                  <button
+                    onClick={() => editingMenuItem && setEditingMenuItem({ ...editingMenuItem, isPopular: !editingMenuItem.isPopular })}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      editingMenuItem?.isPopular ? 'bg-amber-500/20 border-amber-500 text-amber-700' : 'bg-gray-100 border-gray-300 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">⭐</span>
+                    <p className="text-[8px] font-bold uppercase mt-1">Popular</p>
+                  </button>
+                  <button
+                    onClick={() => editingMenuItem && setEditingMenuItem({ ...editingMenuItem, isNew: !editingMenuItem.isNew })}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      editingMenuItem?.isNew ? 'bg-emerald-500/20 border-emerald-500 text-emerald-700' : 'bg-gray-100 border-gray-300 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">🆕</span>
+                    <p className="text-[8px] font-bold uppercase mt-1">New</p>
+                  </button>
+                  <button
+                    onClick={() => editingMenuItem && setEditingMenuItem({ ...editingMenuItem, isVegetarian: !editingMenuItem.isVegetarian })}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      editingMenuItem?.isVegetarian ? 'bg-green-500/20 border-green-500 text-green-700' : 'bg-gray-100 border-gray-300 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">🥬</span>
+                    <p className="text-[8px] font-bold uppercase mt-1">Vegetarian</p>
+                  </button>
+                  <button
+                    onClick={() => editingMenuItem && setEditingMenuItem({ ...editingMenuItem, isVegan: !editingMenuItem.isVegan })}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      editingMenuItem?.isVegan ? 'bg-green-600/20 border-green-600 text-green-800' : 'bg-gray-100 border-gray-300 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">🌱</span>
+                    <p className="text-[8px] font-bold uppercase mt-1">Vegan</p>
+                  </button>
+                  <button
+                    onClick={() => editingMenuItem && setEditingMenuItem({ ...editingMenuItem, isGlutenFree: !editingMenuItem.isGlutenFree })}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      editingMenuItem?.isGlutenFree ? 'bg-orange-500/20 border-orange-500 text-orange-700' : 'bg-gray-100 border-gray-300 text-gray-500'
+                    }`}
+                  >
+                    <span className="text-2xl">🌾</span>
+                    <p className="text-[8px] font-bold uppercase mt-1">GF</p>
+                  </button>
+                  <button
+                    onClick={() => editingMenuItem && setEditingMenuItem({ ...editingMenuItem, isAvailable: editingMenuItem.isAvailable === false ? true : false })}
+                    className={`p-3 rounded-xl border-2 transition-all ${
+                      editingMenuItem?.isAvailable !== false ? 'bg-blue-500/20 border-blue-500 text-blue-700' : 'bg-red-500/20 border-red-500 text-red-700'
+                    }`}
+                  >
+                    <span className="text-2xl">{editingMenuItem?.isAvailable !== false ? '✅' : '❌'}</span>
+                    <p className="text-[8px] font-bold uppercase mt-1">{editingMenuItem?.isAvailable !== false ? 'Available' : 'Hidden'}</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-6 border-t-2 border-gray-200">
+                <button
+                  onClick={() => {
+                    setEditingMenuItem(null);
+                    setIsAddingNewItem(false);
                   }}
-                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-gold-400/50 outline-none transition-all text-2xl font-bold"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <button
-                  onClick={() => setEditingMenuItem({ ...editingMenuItem, isPopular: !editingMenuItem.isPopular })}
-                  className={`p-4 rounded-xl border transition-all ${
-                    editingMenuItem.isPopular ? 'bg-gold-400/10 border-gold-400/30 text-gold-400' : 'bg-zinc-900/30 border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  <span className="text-xl">⭐</span>
-                  <p className="text-[9px] font-bold uppercase mt-1">Popular</p>
-                </button>
-                <button
-                  onClick={() => setEditingMenuItem({ ...editingMenuItem, isNew: !editingMenuItem.isNew })}
-                  className={`p-4 rounded-xl border transition-all ${
-                    editingMenuItem.isNew ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-zinc-900/30 border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  <span className="text-xl">🆕</span>
-                  <p className="text-[9px] font-bold uppercase mt-1">New</p>
-                </button>
-                <button
-                  onClick={() => setEditingMenuItem({ ...editingMenuItem, isVegetarian: !editingMenuItem.isVegetarian })}
-                  className={`p-4 rounded-xl border transition-all ${
-                    editingMenuItem.isVegetarian ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-zinc-900/30 border-zinc-800 text-zinc-500'
-                  }`}
-                >
-                  <span className="text-xl">🥬</span>
-                  <p className="text-[9px] font-bold uppercase mt-1">Vegetarian</p>
-                </button>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={() => setEditingMenuItem(null)}
-                  className="flex-1 py-4 glass border border-zinc-800 rounded-2xl text-zinc-400 font-bold uppercase text-[10px] tracking-widest hover:border-zinc-600 transition-all"
+                  className="flex-1 py-4 glass border-2 border-gray-300 rounded-2xl text-gray-600 font-bold uppercase text-[11px] tracking-widest hover:border-gray-400 hover:text-gray-900 transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => {
-                    updateMenuItem(editingMenuItem.id, editingMenuItem);
-                    setEditingMenuItem(null);
+                    if (editingMenuItem) {
+                      if (isAddingNewItem) {
+                        // Generate new ID
+                        const newId = `item-${Date.now()}`;
+                        menuCtx.addMenuItem({ ...editingMenuItem, id: newId });
+                      } else {
+                        menuCtx.updateMenuItem(editingMenuItem.id, editingMenuItem);
+                      }
+                      setEditingMenuItem(null);
+                      setIsAddingNewItem(false);
+                    }
                   }}
-                  className="flex-[2] py-4 gold-bg text-zinc-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg hover:scale-[1.02] transition-all"
+                  className="flex-[2] py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-[0_8px_30px_-8px_rgba(0,102,204,0.6)] hover:scale-[1.02] transition-all"
                 >
-                  Save Changes
+                  {isAddingNewItem ? '➕ Add Dish' : '💾 Save Changes'}
                 </button>
               </div>
             </div>
@@ -947,13 +2078,13 @@ const AdminDashboard: React.FC = () => {
                  </div>
                  <div className="flex justify-between text-sm py-4">
                      <span className="text-zinc-500 font-bold uppercase tracking-widest">Final Net Result</span>
-                     <span className="text-3xl font-serif font-bold gold-gradient">€{stats.netRevenue.toFixed(2)}</span>
+                     <span className="text-3xl font-serif font-bold blue-gradient">€{stats.netRevenue.toFixed(2)}</span>
                  </div>
              </div>
 
              <button 
                onClick={() => window.print()}
-               className="w-full py-6 rounded-3xl gold-bg text-zinc-950 font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
+               className="w-full py-6 rounded-3xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
              >
                 Download Audit Report (PDF)
              </button>
@@ -1009,7 +2140,78 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="flex gap-4">
               <button disabled={isPrinting} onClick={() => setPrintingOrder(null)} className="flex-1 py-5 glass border border-zinc-800 rounded-2xl text-zinc-500 font-bold uppercase text-[10px]">Cancel</button>
-              <button disabled={isPrinting} onClick={() => performActualPrint(printingOrder)} className="flex-[2] py-5 gold-bg text-zinc-950 rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Confirm & Execute Print</button>
+              <button disabled={isPrinting} onClick={() => performActualPrint(printingOrder)} className="flex-[2] py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Confirm & Execute Print</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setDeleteConfirmId(null)} />
+          <div className="relative glass rounded-[3rem] border-2 border-red-500/30 shadow-3xl animate-reveal p-10 space-y-6 max-w-md bg-white/95">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
+                <svg className="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-3xl font-serif font-bold text-gray-900 mb-3">Delete Dish?</h3>
+              <p className="text-gray-600 text-sm leading-relaxed mb-2">
+                Are you sure you want to permanently delete this menu item?
+              </p>
+              <p className="text-red-600 text-xs font-bold uppercase tracking-wider">
+                This action cannot be undone
+              </p>
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 py-4 glass border-2 border-gray-300 rounded-2xl text-gray-600 font-bold uppercase text-[10px] tracking-widest hover:border-gray-400 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (deleteConfirmId) {
+                    menuCtx.deleteMenuItem(deleteConfirmId);
+                    setDeleteConfirmId(null);
+                  }
+                }}
+                className="flex-1 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-[0_8px_30px_-8px_rgba(220,38,38,0.6)] hover:scale-[1.02] transition-all"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastNotification && (
+        <div className="fixed bottom-8 right-8 z-[200] animate-reveal">
+          <div className="glass border border-blue-400 rounded-2xl p-6 shadow-2xl max-w-md">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white mb-1">Nowe Zamówienie</p>
+                <p className="text-xs text-zinc-300">{toastNotification.message}</p>
+              </div>
+              <button
+                onClick={() => setToastNotification(null)}
+                className="flex-shrink-0 text-zinc-400 hover:text-white transition-colors"
+                aria-label="Zamknij powiadomienie"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>

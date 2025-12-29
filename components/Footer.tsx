@@ -1,12 +1,14 @@
 
 import React, { useContext } from 'react';
-import { LanguageContext } from '../index';
+import { LanguageContext, SettingsContext } from '../index';
 import { TRANSLATIONS } from '../constants';
 
 const Footer: React.FC = () => {
   const langCtx = useContext(LanguageContext);
-  if (!langCtx) return null;
+  const settingsCtx = useContext(SettingsContext);
+  if (!langCtx || !settingsCtx) return null;
   const t = TRANSLATIONS[langCtx.language];
+  const { settings } = settingsCtx;
 
   return (
     <footer id="contact" className="pt-24 pb-12 bg-gradient-to-b from-blue-50 to-white border-t border-blue-200 overflow-hidden relative">
@@ -22,7 +24,7 @@ const Footer: React.FC = () => {
                 <span className="text-white font-bold text-lg">I</span>
               </div>
               <span className="text-xl font-serif tracking-widest uppercase text-gray-800">
-                Greek <span className="gold-gradient font-bold">Irini</span>
+                Greek <span className="blue-gradient font-bold">Irini</span>
               </span>
             </div>
             <p className="text-gray-600 max-w-sm mb-8 leading-relaxed">
@@ -42,15 +44,15 @@ const Footer: React.FC = () => {
             <ul className="space-y-4 text-gray-600">
               <li className="flex items-start gap-4">
                 <span className="text-blue-600">A:</span>
-                <span>Weimarstraat 174, 2562 HD<br/>Den Haag, Holandia</span>
+                <span>{settings.address}, {settings.postalCode}<br/>{settings.city}, Holandia</span>
               </li>
               <li className="flex items-center gap-4">
                 <span className="text-blue-600">T:</span>
-                <span>+31 (0) 70 555 0123</span>
+                <span>{settings.phone}</span>
               </li>
               <li className="flex items-center gap-4">
                 <span className="text-blue-600">E:</span>
-                <span>info@greekirini.nl</span>
+                <span>{settings.email}</span>
               </li>
             </ul>
           </div>
@@ -58,21 +60,22 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="font-serif font-bold text-xl mb-8 tracking-widest uppercase text-gray-800">Opening</h4>
             <ul className="space-y-4 text-gray-600">
-              <li className="flex justify-between">
-                <span>Mon - Thu:</span>
-                <span className="text-gray-800">12:00 - 22:00</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Fri - Sat:</span>
-                <span className="text-gray-800">12:00 - 00:00</span>
-              </li>
+              {Object.entries(settings.openingHours).slice(0, 2).map(([day, hours]) => {
+                const h = hours as { open: string; close: string; closed?: boolean };
+                return !h.closed ? (
+                  <li key={day} className="flex justify-between capitalize">
+                    <span>{day}:</span>
+                    <span className="text-gray-800">{h.open} - {h.close}</span>
+                  </li>
+                ) : null;
+              })}
             </ul>
           </div>
         </div>
 
         <div className="pt-12 border-t border-blue-200 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-gray-500 text-xs tracking-widest uppercase">
-            &copy; 2025 Greek Irini. All rights reserved.
+            &copy; 2025 {settings.name}. All rights reserved.
           </p>
           <div className="flex gap-8 text-gray-500 text-xs tracking-widest uppercase">
             <a href="#" className="hover:text-blue-600 transition-colors">Privacy</a>
