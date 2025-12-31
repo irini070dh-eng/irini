@@ -1,5 +1,5 @@
 
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Menu from './components/Menu';
@@ -9,6 +9,7 @@ import AdminDashboard from './components/AdminDashboard';
 import CartDrawer from './components/CartDrawer';
 import CheckoutView from './components/CheckoutView';
 import OrderConfirmationView from './components/OrderConfirmationView';
+import ReservationForm from './components/ReservationForm';
 import Footer from './components/Footer';
 import GoogleReviewCard from './components/GoogleReviewCard';
 import { View } from './types';
@@ -20,11 +21,45 @@ const App: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isChangingView, setIsChangingView] = useState(false);
   const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Try to autoplay with sound immediately
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.muted = false;
+      video.play().catch(() => {
+        // Browser blocked autoplay with sound, fallback to muted
+        video.muted = true;
+        setIsMuted(true);
+        video.play();
+      });
+    }
+  }, []);
 
   const langCtx = useContext(LanguageContext);
   const checkoutCtx = useContext(CheckoutContext);
   const language = langCtx?.language || 'nl';
   const t = TRANSLATIONS[language];
+
+  // Handle URL hash for admin access (secret URL: yoursite.com/#admin)
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        setView('admin');
+        // Clear hash from URL for security (so it's not visible in browser)
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+    
+    // Check on mount
+    handleHashChange();
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const handleViewChange = (view: View) => {
     if (view === activeView || isChangingView) return;
@@ -100,7 +135,36 @@ const App: React.FC = () => {
                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
                  <div className="relative group">
                     <div className="relative z-10 overflow-hidden rounded-[3.5rem] border border-blue-200">
-                      <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=1000" alt="Greek cuisine heritage" className="w-full object-cover aspect-[4/5] grayscale group-hover:grayscale-0 transition-all duration-1000" />
+                      <video 
+                        ref={videoRef}
+                        src="/WhatsApp Video 2025-12-31 at 1.58.25 AM.mp4" 
+                        autoPlay
+                        loop
+                        playsInline
+                        className="w-full h-auto"
+                      />
+                      {/* Sound toggle button */}
+                      <button
+                        onClick={() => {
+                          if (videoRef.current) {
+                            videoRef.current.muted = !isMuted;
+                            setIsMuted(!isMuted);
+                          }
+                        }}
+                        className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 z-20"
+                        title={isMuted ? 'Włącz dźwięk' : 'Wycisz'}
+                      >
+                        {isMuted ? (
+                          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                          </svg>
+                        ) : (
+                          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                          </svg>
+                        )}
+                      </button>
                     </div>
                  </div>
                  <div className="space-y-12">
@@ -132,6 +196,7 @@ const App: React.FC = () => {
         {activeView === 'menu' && <Menu />}
         {activeView === 'about' && <AboutView />}
         {activeView === 'contact' && <ContactView />}
+        {activeView === 'reservations' && <ReservationForm />}
         {activeView === 'admin' && <AdminDashboard />}
         {activeView === 'checkout' && (
           <CheckoutView 
@@ -151,10 +216,7 @@ const App: React.FC = () => {
       <Footer />
       </div>
       
-      {/* Hidden Dev Trigger for Staff Portal */}
-      <div className="fixed bottom-4 left-4 z-[200] opacity-10 hover:opacity-100 transition-opacity">
-        <button onClick={() => handleViewChange('admin')} className="text-[8px] uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800 text-zinc-500">Staff Portal</button>
-      </div>
+      {/* Admin access via URL hash #admin only - no visible button */}
 
       <CartDrawer 
         isOpen={isCartOpen} 

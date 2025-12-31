@@ -48,11 +48,11 @@ const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-4">
                 <span className="text-blue-600">T:</span>
-                <span>{settings.phone}</span>
+                <span>0615869325</span>
               </li>
               <li className="flex items-center gap-4">
                 <span className="text-blue-600">E:</span>
-                <span>{settings.email}</span>
+                <span>irini070dh@gmail.com</span>
               </li>
             </ul>
           </div>

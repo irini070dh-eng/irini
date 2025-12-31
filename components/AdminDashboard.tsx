@@ -1,10 +1,12 @@
 
 import React, { useContext, useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { OrdersContext, LanguageContext, MenuContext, SettingsContext, DriversContext } from '../index';
+import { OrdersContext, LanguageContext, MenuContext, SettingsContext, DriversContext, ReservationsContext } from '../index';
 import { TRANSLATIONS, MENU_ITEMS } from '../constants';
-import { Order, OrderStatus, MenuItem, RestaurantSettings, Language } from '../types';
+import { storageService, menuService, authService } from '../services/supabaseClient';
+import { Order, OrderStatus, MenuItem, RestaurantSettings, Language, Reservation, ReservationStatus } from '../types';
+import AdminLogin from './AdminLogin';
 
-type AdminTab = 'orders' | 'history' | 'analytics' | 'menu' | 'settings';
+type AdminTab = 'orders' | 'history' | 'analytics' | 'menu' | 'reservations' | 'settings';
 type SortKey = 'date' | 'status' | 'amount';
 type SortOrder = 'asc' | 'desc';
 type SyncStatus = 'connected' | 'reconnecting' | 'failed' | 'offline';
@@ -22,9 +24,15 @@ const AdminDashboard: React.FC = () => {
   const settingsCtx = useContext(SettingsContext);
   const langCtx = useContext(LanguageContext);
   const driversCtx = useContext(DriversContext);
+  const reservationsCtx = useContext(ReservationsContext);
   
   const [activeTab, setActiveTab] = useState<AdminTab>('orders');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [reservationCalendarDate, setReservationCalendarDate] = useState<Date>(new Date());
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+  const [reservationAdminNotes, setReservationAdminNotes] = useState('');
+  const [alternativeTime, setAlternativeTime] = useState('');
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [statusChangePending, setStatusChangePending] = useState<StatusChangeRequest | null>(null);
@@ -65,6 +73,12 @@ const AdminDashboard: React.FC = () => {
   // Menu Management State
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
   const [isAddingNewItem, setIsAddingNewItem] = useState(false);
+  
+  // Driver Management State
+  const [editingDriver, setEditingDriver] = useState<{id: string; name: string; phone: string} | null>(null);
+  const [isAddingNewDriver, setIsAddingNewDriver] = useState(false);
+  const [newDriverName, setNewDriverName] = useState('');
+  const [newDriverPhone, setNewDriverPhone] = useState('');
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
   const [menuCategoryFilter, setMenuCategoryFilter] = useState<string>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -77,12 +91,38 @@ const AdminDashboard: React.FC = () => {
     return saved || 'Admin';
   });
 
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await authService.getSession();
+      setIsAuthenticated(!!user);
+      setCurrentUserEmail(user?.email || null);
+      setIsCheckingAuth(false);
+    };
+    checkAuth();
+
+    // Listen for auth changes
+    const unsubscribe = authService.onAuthStateChange((user) => {
+      setIsAuthenticated(!!user);
+      setCurrentUserEmail(user?.email || null);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // Browser Notifications State
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const [toastNotification, setToastNotification] = useState<{id: string, message: string, type: 'info' | 'success' | 'warning'} | null>(null);
 
-  // Handle image file upload
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle image file upload to Supabase Storage
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -100,29 +140,135 @@ const AdminDashboard: React.FC = () => {
 
     setUploadingImage(true);
 
-    // Convert to base64
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target?.result as string;
+    try {
+      // Upload to Supabase Storage
+      const imageUrl = await storageService.uploadMenuImage(file);
       if (editingMenuItem) {
-        setEditingMenuItem({ ...editingMenuItem, image: base64 });
+        setEditingMenuItem({ ...editingMenuItem, image: imageUrl });
       }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Error uploading image. Please try again.');
+    } finally {
       setUploadingImage(false);
-    };
-    reader.onerror = () => {
-      alert('Error reading file');
-      setUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
-  if (!ordersCtx || !langCtx || !menuCtx || !settingsCtx || !driversCtx) return null;
+  if (!ordersCtx || !langCtx || !menuCtx || !settingsCtx || !driversCtx || !reservationsCtx) return null;
   const { orders, updateOrderStatus, addStaffNote, assignDriver } = ordersCtx;
+  const { reservations, updateReservationStatus, sendConfirmation, sendRejection, addAdminNote, getPendingReservations, getConfirmedReservations } = reservationsCtx;
   const { menuItems, updateMenuItem, toggleAvailability, deleteMenuItem } = menuCtx;
   const { settings, updateSettings } = settingsCtx;
   const { language } = langCtx;
-  const { drivers, updateDriverStatus } = driversCtx;
+  const { drivers, addDriver, updateDriver, updateDriverStatus, removeDriver } = driversCtx;
   const t = TRANSLATIONS[language];
+
+  // Helper function to open Gmail compose with pre-filled message from restaurant email
+  const openEmailClient = (to: string, subject: string, body: string) => {
+    // Gmail compose URL that opens in browser with pre-filled fields
+    const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailComposeUrl, '_blank');
+  };
+
+  // Generate confirmation email body
+  const generateConfirmationEmailBody = (reservation: any, adminNotes: string) => {
+    const isPolish = language === 'pl';
+    
+    return isPolish 
+      ? `[UWAGA: Wyślij z konta irini070dh@gmail.com]
+
+Dzień dobry ${reservation.customerName}!
+
+Z przyjemnością potwierdzamy Twoją rezerwację w Greek Irini!
+
+Jest nam niezmiernie miło móc gościć Cię w naszej rodzinnej restauracji. Czekamy z niecierpliwością, aby podzielić się z Tobą autentyczną grecką gościnnością i tradycyjnymi smakami prosto z wybrzeży Morza Egejskiego.
+
+📅 SZCZEGÓŁY TWOJEJ REZERWACJI:
+
+Data: ${reservation.date}
+Godzina: ${reservation.time}
+Liczba gości: ${reservation.numberOfGuests} ${reservation.numberOfGuests === 1 ? 'osoba' : 'osoby'}
+${reservation.specialRequests ? `\nSpecjalne życzenia: ${reservation.specialRequests}` : ''}
+${adminNotes ? `\nDodatkowe informacje: ${adminNotes}` : ''}
+
+✨ Do zobaczenia wkrótce w Greek Irini!
+
+Z wyrazami szacunku,
+Zespół Greek Irini
+
+Weimarstraat 174, 2562 HD Den Haag
+Tel: 0615869325
+Email: irini070dh@gmail.com`
+      : `[LET OP: Verzend vanaf account irini070dh@gmail.com]
+
+Goedendag ${reservation.customerName}!
+
+Met veel plezier bevestigen wij uw reservering bij Greek Irini!
+
+Het is ons een eer u te mogen verwelkomen in ons familierestaurant. We kijken ernaar uit om authentieke Griekse gastvrijheid en traditionele smaken van de Egeïsche kust met u te delen.
+
+📅 DETAILS VAN UW RESERVERING:
+
+Datum: ${reservation.date}
+Tijd: ${reservation.time}
+Aantal gasten: ${reservation.numberOfGuests} ${reservation.numberOfGuests === 1 ? 'persoon' : 'personen'}
+${reservation.specialRequests ? `\nBijzondere wensen: ${reservation.specialRequests}` : ''}
+${adminNotes ? `\nAanvullende informatie: ${adminNotes}` : ''}
+
+✨ Tot ziens bij Greek Irini!
+
+Met vriendelijke groet,
+Team Greek Irini
+
+Weimarstraat 174, 2562 HD Den Haag
+Tel: 0615869325
+Email: irini070dh@gmail.com`;
+  };
+
+  // Generate rejection email body
+  const generateRejectionEmailBody = (reservation: any, alternativeTime: string) => {
+    const isPolish = language === 'pl';
+    
+    return isPolish
+      ? `[UWAGA: Wyślij z konta irini070dh@gmail.com]
+
+Dzień dobry ${reservation.customerName},
+
+Bardzo nam przykro, ale niestety nie możemy potwierdzić Twojej rezerwacji na dzień ${reservation.date} o godzinie ${reservation.time}.
+
+W tym terminie mamy już komplety rezerwacji.
+${alternativeTime ? `\n\n💡 CZY MOŻE PASOWAŁABY INNA GODZINA?\n\nProponujemy: ${alternativeTime}\n\nJeśli ten termin Państwu odpowiada, prosimy o kontakt telefoniczny lub mailowy, a chętnie dokonamy rezerwacji.` : `\n\nProsimy o kontakt w celu ustalenia alternatywnego terminu. Chętnie znajdziemy dla Państwa odpowiednią godzinę.`}
+
+📞 KONTAKT:
+Tel: 0615869325
+Email: irini070dh@gmail.com
+
+Przepraszamy za niedogodności i mamy nadzieję, że wkrótce będziemy mogli Państwa gościć!
+
+Z wyrazami szacunku,
+Zespół Greek Irini
+
+Weimarstraat 174, 2562 HD Den Haag`
+      : `[LET OP: Verzend vanaf account irini070dh@gmail.com]
+
+Goedendag ${reservation.customerName},
+
+Het spijt ons zeer, maar helaas kunnen we uw reservering voor ${reservation.date} om ${reservation.time} niet bevestigen.
+
+Op dit moment zijn we voor deze tijd volledig volgeboekt.
+${alternativeTime ? `\n\n💡 ZOU HET MOGELIJK ZIJN OP EEN ANDER TIJDSTIP?\n\nWe stellen voor: ${alternativeTime}\n\nAls dit schikt, neem dan gerust contact met ons op en we maken graag een nieuwe reservering voor u.` : `\n\nNeem gerust contact met ons op voor een alternatief tijdstip. We helpen graag bij het vinden van een geschikt moment.`}
+
+📞 CONTACT:
+Tel: 0615869325
+Email: irini070dh@gmail.com
+
+Onze excuses voor het ongemak en we hopen u binnenkort te mogen verwelkomen!
+
+Met vriendelijke groet,
+Team Greek Irini
+
+Weimarstraat 174, 2562 HD Den Haag`;
+  };
 
   // Save staff name to localStorage
   useEffect(() => {
@@ -690,6 +836,30 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Handle logout
+  const handleLogout = async () => {
+    await authService.signOut();
+    setIsAuthenticated(false);
+    setCurrentUserEmail(null);
+  };
+
+  // Show loading while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-white/60">Sprawdzanie autoryzacji...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <AdminLogin onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col lg:flex-row pt-24 overflow-hidden">
       {/* Sidebar Navigation */}
@@ -698,8 +868,8 @@ const AdminDashboard: React.FC = () => {
           <div className="flex items-center gap-3 mb-10">
              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center font-serif font-bold text-white text-xl shadow-lg">I</div>
              <div className="leading-tight">
-                <h2 className="text-lg font-serif font-bold text-gray-800">Staff Console</h2>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-gray-600 font-bold">Greek Irini Premium</p>
+                <h2 className="text-lg font-serif font-bold text-gray-800">{t.staffConsole}</h2>
+                <p className="text-[9px] uppercase tracking-[0.3em] text-gray-600 font-bold">{t.greekIriniPremium}</p>
              </div>
           </div>
 
@@ -709,20 +879,21 @@ const AdminDashboard: React.FC = () => {
                 {syncStatus === 'connected' && <span className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping opacity-40" />}
              </div>
              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-800">
-                {syncStatus === 'connected' ? 'Live Link Active' : 'Synchronizing...'}
+                {syncStatus === 'connected' ? t.liveLink : 'Synchronizing...'}
              </p>
           </div>
           
           {[
-            { id: 'orders', label: 'Live Orders', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-            { id: 'history', label: 'History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-            { id: 'analytics', label: 'Analytics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2' },
-            { id: 'menu', label: 'Menu Mgmt', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13' },
-            { id: 'settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066' }
+            { id: 'orders', label: t.liveOrders, icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+            { id: 'history', label: t.history, icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+            { id: 'reservations', label: t.reservations, icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+            { id: 'analytics', label: t.analytics, icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2' },
+            { id: 'menu', label: t.menuManagement, icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13' },
+            { id: 'settings', label: t.settings, icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066' }
           ].map(item => (
             <button
               key={item.id}
-              onClick={() => { setActiveTab(item.id as AdminTab); setSelectedOrder(null); }}
+              onClick={() => { setActiveTab(item.id as AdminTab); setSelectedOrder(null); setSelectedReservation(null); }}
               className={`w-full flex items-center gap-5 px-6 py-5 rounded-2xl transition-all duration-500 group relative overflow-hidden ${
                 activeTab === item.id ? 'text-white' : 'text-gray-600 hover:text-gray-800'
               }`}
@@ -737,6 +908,11 @@ const AdminDashboard: React.FC = () => {
                   {stats.activeCount}
                 </span>
               )}
+              {item.id === 'reservations' && getPendingReservations().length > 0 && (
+                <span className={`ml-auto w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold relative z-10 ${activeTab === item.id ? 'bg-white text-blue-600' : 'bg-amber-500 text-white'}`}>
+                  {getPendingReservations().length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -746,10 +922,29 @@ const AdminDashboard: React.FC = () => {
           className="mt-auto w-full group relative overflow-hidden glass border border-blue-400/30 rounded-2xl p-6 transition-all hover:border-blue-500/50 active:scale-95"
         >
           <div className="text-left relative z-10">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-0.5">Period Report</p>
-            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">Financial Insights</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 mb-0.5">{t.periodicReport}</p>
+            <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">{t.financialInsight}</p>
           </div>
         </button>
+
+        {/* User info & Logout */}
+        <div className="mt-6 space-y-3">
+          {currentUserEmail && (
+            <div className="text-center p-3 rounded-xl bg-blue-50 border border-blue-200">
+              <p className="text-[9px] text-blue-600 font-bold uppercase tracking-wider">Zalogowano jako</p>
+              <p className="text-xs text-gray-700 truncate">{currentUserEmail}</p>
+            </div>
+          )}
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="text-[10px] font-bold uppercase tracking-wider">Wyloguj</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -759,17 +954,17 @@ const AdminDashboard: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
               <div>
                 <h2 className="text-6xl font-serif font-bold text-gray-900 mb-2">
-                  {activeTab === 'orders' ? 'Service Queue' : 'Archive'}
+                  {activeTab === 'orders' ? t.serviceQueue : t.history}
                 </h2>
                 <p className="text-zinc-500 uppercase tracking-[0.4em] text-[10px] font-bold">
-                  {activeTab === 'orders' ? `${stats.activeCount} active requests` : 'Historical Data'}
+                  {activeTab === 'orders' ? `${stats.activeCount} ${t.activeRequests}` : t.history}
                 </p>
               </div>
               
               <div className="flex gap-4 w-full md:w-auto">
                 <input 
                   type="text" 
-                  placeholder="Search orders..." 
+                  placeholder={t.searchOrders}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 text-sm text-gray-900 outline-none focus:border-blue-500 transition-all placeholder:text-gray-500 w-full md:w-64"
@@ -781,7 +976,7 @@ const AdminDashboard: React.FC = () => {
               <div className="xl:col-span-2 space-y-4">
                 {processedOrders.length === 0 ? (
                   <div className="glass rounded-[3rem] p-20 border border-zinc-900 text-center">
-                    <p className="text-zinc-600 font-serif italic text-2xl">No orders found for this view.</p>
+                    <p className="text-zinc-600 font-serif italic text-2xl">{t.noOrdersFound}</p>
                   </div>
                 ) : (
                   processedOrders.map((order) => (
@@ -1118,10 +1313,10 @@ const AdminDashboard: React.FC = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
                {[
-                 { label: 'Revenue', value: `€${stats.revenue.toFixed(0)}`, color: 'gold' },
-                 { label: 'Total Orders', value: stats.orderCount, color: 'emerald' },
-                 { label: 'Avg Order Value', value: `€${stats.avgOrderValue.toFixed(2)}`, color: 'blue' },
-                 { label: 'Dishes Sold', value: stats.totalDishes, color: 'amber' }
+                 { label: t.revenue, value: `€${stats.revenue.toFixed(0)}`, color: 'gold' },
+                 { label: t.totalOrders, value: stats.orderCount, color: 'emerald' },
+                 { label: t.avgOrderValue, value: `€${stats.avgOrderValue.toFixed(2)}`, color: 'blue' },
+                 { label: t.dishesSold, value: stats.totalDishes, color: 'amber' }
                ].map((card, i) => (
                  <div key={i} className="glass p-10 rounded-[3rem] border border-blue-200 bg-white/80 group hover:border-gold-400/30 transition-all">
                     <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold mb-6 group-hover:text-zinc-400 transition-colors">{card.label}</p>
@@ -1223,7 +1418,7 @@ const AdminDashboard: React.FC = () => {
             {/* Tables Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                <div className="glass p-12 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-10 animate-reveal stagger-6">
-                  <h4 className="text-2xl font-serif font-bold text-gray-900">Revenue by Category</h4>
+                  <h4 className="text-2xl font-serif font-bold text-gray-900">{t.revenueByCategory}</h4>
                   <div className="space-y-8">
                      {Object.entries(stats.categoryRevenue).map(([cat, rev]) => {
                        const revNum = typeof rev === 'number' ? rev : 0;
@@ -1244,7 +1439,7 @@ const AdminDashboard: React.FC = () => {
                </div>
 
                <div className="glass p-12 rounded-[3.5rem] border border-blue-200 bg-white/80 space-y-10 animate-reveal stagger-7">
-                  <h4 className="text-2xl font-serif font-bold text-gray-900">Top 5 Bestsellers</h4>
+                  <h4 className="text-2xl font-serif font-bold text-gray-900">{t.topBestsellers}</h4>
                   <div className="space-y-4">
                      {stats.topItems.map(([name, count], i) => (
                         <div key={i} className="flex justify-between items-center p-5 bg-blue-50/50 rounded-2xl border border-blue-200 hover:border-gold-400/20 transition-all">
@@ -1252,7 +1447,7 @@ const AdminDashboard: React.FC = () => {
                               <span className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white">#{i+1}</span>
                               <span className="text-sm text-gray-900 font-medium">{name}</span>
                            </div>
-                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{count} Units</span>
+                           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{count} {t.units}</span>
                         </div>
                      ))}
                   </div>
@@ -1261,12 +1456,439 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Reservations Tab */}
+        {activeTab === 'reservations' && (
+          <div className="max-w-7xl mx-auto space-y-12 animate-reveal">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+              <div>
+                <h2 className="text-6xl font-serif font-bold text-gray-900 mb-2">{t.reservations}</h2>
+                <p className="text-zinc-500 uppercase tracking-[0.4em] text-[10px] font-bold">
+                  {getPendingReservations().length} {t.pending} • {getConfirmedReservations().length} {t.confirmed}
+                </p>
+              </div>
+              
+              {/* Calendar Navigation */}
+              <div className="flex items-center gap-4 glass p-2 rounded-2xl border border-gray-200">
+                <button
+                  onClick={() => {
+                    const newDate = new Date(reservationCalendarDate);
+                    newDate.setMonth(newDate.getMonth() - 1);
+                    setReservationCalendarDate(newDate);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <span className="text-sm font-bold text-gray-800 min-w-[150px] text-center">
+                  {reservationCalendarDate.toLocaleDateString(language === 'pl' ? 'pl-PL' : 'nl-NL', { month: 'long', year: 'numeric' })}
+                </span>
+                <button
+                  onClick={() => {
+                    const newDate = new Date(reservationCalendarDate);
+                    newDate.setMonth(newDate.getMonth() + 1);
+                    setReservationCalendarDate(newDate);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Calendar View */}
+              <div className="lg:col-span-2 glass rounded-3xl p-6 border border-gray-200">
+                <div className="grid grid-cols-7 gap-2 mb-4">
+                  {(t.weekDays as string[]).map(day => (
+                    <div key={day} className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider py-2">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="grid grid-cols-7 gap-2">
+                  {(() => {
+                    const year = reservationCalendarDate.getFullYear();
+                    const month = reservationCalendarDate.getMonth();
+                    const firstDay = new Date(year, month, 1);
+                    const lastDay = new Date(year, month + 1, 0);
+                    const daysInMonth = lastDay.getDate();
+                    const startingDay = (firstDay.getDay() + 6) % 7; // Adjust for Monday start
+                    
+                    const days = [];
+                    
+                    // Empty cells before first day
+                    for (let i = 0; i < startingDay; i++) {
+                      days.push(<div key={`empty-${i}`} className="h-24 rounded-xl" />);
+                    }
+                    
+                    // Days of the month
+                    for (let day = 1; day <= daysInMonth; day++) {
+                      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      const dayReservations = reservations.filter(r => r.date === dateStr);
+                      const confirmedCount = dayReservations.filter(r => r.status === 'confirmed').length;
+                      const pendingCount = dayReservations.filter(r => r.status === 'pending').length;
+                      const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                      const isSelected = selectedCalendarDay === dateStr;
+                      
+                      days.push(
+                        <button
+                          key={day}
+                          onClick={() => {
+                            setSelectedCalendarDay(dateStr);
+                            setSelectedReservation(null);
+                          }}
+                          className={`h-24 rounded-xl p-2 text-left transition-all hover:scale-105 ${
+                            isSelected ? 'bg-blue-600 text-white ring-4 ring-blue-300' :
+                            isToday ? 'bg-blue-500 text-white' : 'bg-gray-50 hover:bg-gray-100'
+                          } ${dayReservations.length > 0 && !isSelected ? 'ring-2 ring-blue-300' : ''}`}
+                        >
+                          <span className={`text-sm font-bold ${isSelected || isToday ? 'text-white' : 'text-gray-800'}`}>
+                            {day}
+                          </span>
+                          {dayReservations.length > 0 && (
+                            <div className="mt-1 space-y-1">
+                              {confirmedCount > 0 && (
+                                <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isSelected || isToday ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'}`}>
+                                  ✓ {confirmedCount}
+                                </div>
+                              )}
+                              {pendingCount > 0 && (
+                                <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isSelected || isToday ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                                  ⏳ {pendingCount}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    }
+                    
+                    return days;
+                  })()}
+                </div>
+              </div>
+
+              {/* Pending Reservations List */}
+              <div className="glass rounded-3xl p-6 border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  {t.pendingReservations}
+                </h3>
+                <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+                  {getPendingReservations().length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-8">{t.noPendingReservations}</p>
+                  ) : (
+                    getPendingReservations().map(reservation => (
+                      <button
+                        key={reservation.id}
+                        onClick={() => setSelectedReservation(reservation)}
+                        className={`w-full text-left p-4 rounded-2xl transition-all hover:scale-[1.02] ${
+                          selectedReservation?.id === reservation.id 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className={`font-bold ${selectedReservation?.id === reservation.id ? 'text-white' : 'text-gray-800'}`}>
+                            {reservation.customerName}
+                          </span>
+                          <span className={`text-xs font-bold ${selectedReservation?.id === reservation.id ? 'text-white/80' : 'text-amber-600'}`}>
+                            {reservation.numberOfGuests} {t.persons}
+                          </span>
+                        </div>
+                        <div className={`text-sm ${selectedReservation?.id === reservation.id ? 'text-white/80' : 'text-gray-600'}`}>
+                          📅 {new Date(reservation.date).toLocaleDateString(language === 'pl' ? 'pl-PL' : 'nl-NL')} • {reservation.time}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Selected Reservation Details */}
+            {selectedReservation && (
+              <div className="glass rounded-3xl p-8 border-2 border-blue-200 animate-reveal">
+                <div className="flex flex-col lg:flex-row gap-8">
+                  <div className="flex-1 space-y-6">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-3xl font-serif font-bold text-gray-800">{selectedReservation.customerName}</h3>
+                        <p className="text-sm text-gray-500">ID: {selectedReservation.id}</p>
+                      </div>
+                      <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        selectedReservation.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                        selectedReservation.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                        selectedReservation.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {t.reservationStatus[selectedReservation.status]}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-2xl p-4">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{t.date}</p>
+                        <p className="text-lg font-bold text-gray-800">
+                          {new Date(selectedReservation.date).toLocaleDateString(language === 'pl' ? 'pl-PL' : 'nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-2xl p-4">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{t.time}</p>
+                        <p className="text-lg font-bold text-gray-800">{selectedReservation.time}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-2xl p-4">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{t.guests}</p>
+                        <p className="text-lg font-bold text-gray-800">{selectedReservation.numberOfGuests} {t.persons}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-2xl p-4">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{t.phone}</p>
+                        <p className="text-lg font-bold text-gray-800">{selectedReservation.customerPhone}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-2xl p-4">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email</p>
+                      <p className="text-lg font-bold text-blue-600">{selectedReservation.customerEmail}</p>
+                    </div>
+                    
+                    {selectedReservation.specialRequests && (
+                      <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+                        <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-1">{t.specialRequests}</p>
+                        <p className="text-sm text-gray-700">{selectedReservation.specialRequests}</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Actions Panel */}
+                  <div className="lg:w-80 space-y-4">
+                    {selectedReservation.status === 'pending' && (
+                      <>
+                        <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
+                          <label className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-2">
+                            {t.adminNotes}
+                          </label>
+                          <textarea
+                            value={reservationAdminNotes}
+                            onChange={(e) => setReservationAdminNotes(e.target.value)}
+                            className="w-full p-3 rounded-xl border border-blue-200 text-sm resize-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                            rows={3}
+                            placeholder={t.adminNotesPlaceholder}
+                          />
+                        </div>
+                        
+                        <button
+                          onClick={async () => {
+                            const emailBody = generateConfirmationEmailBody(selectedReservation, reservationAdminNotes);
+                            const subject = language === 'pl' 
+                              ? `✓ Potwierdzenie rezerwacji - Greek Irini`
+                              : `✓ Reserveringsbevestiging - Greek Irini`;
+                            
+                            // Open email client
+                            openEmailClient(selectedReservation.customerEmail, subject, emailBody);
+                            
+                            // Update reservation status
+                            await sendConfirmation(selectedReservation.id, reservationAdminNotes || undefined);
+                            setReservationAdminNotes('');
+                            setSelectedReservation(null);
+                          }}
+                          className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {t.confirmAndSendEmail}
+                        </button>
+                        
+                        <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+                          <label className="text-xs font-bold text-red-600 uppercase tracking-wider block mb-2">
+                            {language === 'pl' ? 'Alternatywna godzina (opcjonalnie)' : 'Alternatief tijdstip (optioneel)'}
+                          </label>
+                          <input
+                            type="text"
+                            value={alternativeTime}
+                            onChange={(e) => setAlternativeTime(e.target.value)}
+                            className="w-full p-3 rounded-xl border border-red-200 text-sm focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                            placeholder={language === 'pl' ? 'np. 19:00 lub 20:30' : 'bijv. 19:00 of 20:30'}
+                          />
+                        </div>
+                        
+                        <button
+                          onClick={async () => {
+                            const emailBody = generateRejectionEmailBody(selectedReservation, alternativeTime);
+                            const subject = language === 'pl'
+                              ? `Rezerwacja w Greek Irini - Prośba o kontakt`
+                              : `Reservering bij Greek Irini - Verzoek tot contact`;
+                            
+                            // Open email client
+                            openEmailClient(selectedReservation.customerEmail, subject, emailBody);
+                            
+                            // Update reservation status
+                            await sendRejection(selectedReservation.id, alternativeTime || undefined);
+                            setAlternativeTime('');
+                            setSelectedReservation(null);
+                          }}
+                          className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          {t.rejectReservation}
+                        </button>
+                      </>
+                    )}
+                    
+                    {selectedReservation.status === 'confirmed' && (
+                      <div className="bg-green-50 rounded-2xl p-4 border border-green-200">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-bold text-green-800">{t.reservationStatus.confirmed}</p>
+                            {selectedReservation.confirmationSentAt && (
+                              <p className="text-xs text-green-600">
+                                {t.confirmationSentAt}: {new Date(selectedReservation.confirmationSentAt).toLocaleString(language === 'pl' ? 'pl-PL' : 'nl-NL')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {selectedReservation.adminNotes && (
+                          <p className="text-sm text-gray-700 bg-white rounded-xl p-3">
+                            {selectedReservation.adminNotes}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    <button
+                      onClick={() => setSelectedReservation(null)}
+                      className="w-full py-3 glass border border-gray-300 rounded-2xl text-gray-600 font-bold uppercase text-xs tracking-widest hover:border-gray-400 transition-all"
+                    >
+                      {t.close}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reservations for Selected Day - Shows when a day is clicked */}
+            {selectedCalendarDay && (
+              <div className="glass rounded-3xl p-6 border-2 border-blue-300 bg-blue-50/30 animate-reveal">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    {t.reservationsFor} {new Date(selectedCalendarDay).toLocaleDateString(language === 'pl' ? 'pl-PL' : 'nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedCalendarDay(null)}
+                    className="p-2 hover:bg-gray-200 rounded-xl transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {(() => {
+                  const dayReservations = reservations
+                    .filter(r => r.date === selectedCalendarDay && r.status !== 'cancelled')
+                    .sort((a, b) => a.time.localeCompare(b.time));
+                  
+                  if (dayReservations.length === 0) {
+                    return (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <p className="text-gray-500 font-medium">{t.noReservationsThisDay}</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="space-y-3">
+                      {dayReservations.map(reservation => (
+                        <div 
+                          key={reservation.id}
+                          onClick={() => setSelectedReservation(reservation)}
+                          className={`p-4 rounded-2xl border-2 cursor-pointer transition-all hover:scale-[1.01] ${
+                            reservation.status === 'pending' 
+                              ? 'bg-amber-50 border-amber-200 hover:border-amber-400' 
+                              : 'bg-green-50 border-green-200 hover:border-green-400'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-lg ${
+                                reservation.status === 'pending' ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'
+                              }`}>
+                                {reservation.time}
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-800 text-lg">{reservation.customerName}</p>
+                                <p className="text-sm text-gray-600">
+                                  👥 {reservation.numberOfGuests} {t.persons} • 📞 {reservation.customerPhone}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                                reservation.status === 'pending' ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'
+                              }`}>
+                                {reservation.status === 'pending' ? `⏳ ${t.reservationStatus.pending}` : `✓ ${t.reservationStatus.confirmed}`}
+                              </span>
+                              {reservation.specialRequests && (
+                                <p className="text-xs text-gray-500 mt-2 max-w-[200px] truncate">
+                                  💬 {reservation.specialRequests}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Summary */}
+                      <div className="mt-6 pt-4 border-t border-blue-200 flex items-center justify-between">
+                        <div className="flex gap-4">
+                          <span className="text-sm text-gray-600">
+                            <span className="font-bold text-green-600">{dayReservations.filter(r => r.status === 'confirmed').length}</span> {t.confirmedRes}
+                          </span>
+                          <span className="text-sm text-gray-600">
+                            <span className="font-bold text-amber-600">{dayReservations.filter(r => r.status === 'pending').length}</span> {t.pendingRes}
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-800">
+                          {t.totalGuests}: {dayReservations.reduce((sum, r) => sum + r.numberOfGuests, 0)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Menu Management Tab */}
         {activeTab === 'menu' && (
           <div className="max-w-7xl mx-auto space-y-12 animate-reveal">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
               <div>
-                <h2 className="text-6xl font-serif font-bold text-gray-900 mb-2">Menu Management</h2>
+                <h2 className="text-6xl font-serif font-bold text-gray-900 mb-2">{t.menuManagement}</h2>
                 <p className="text-zinc-500 uppercase tracking-[0.4em] text-[10px] font-bold">
                   {menuItems.length} items • {menuItems.filter(m => m.isAvailable !== false).length} available
                 </p>
@@ -1526,51 +2148,195 @@ const AdminDashboard: React.FC = () => {
 
             {/* Driver Management */}
             <div className="glass rounded-[3rem] border border-blue-200 bg-white/80 p-10 space-y-8">
-              <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
-                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-                </svg>
-                Driver Management
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-serif font-bold text-gray-900 flex items-center gap-4">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                  </svg>
+                  Driver Management
+                </h3>
+                <button
+                  onClick={() => setIsAddingNewDriver(true)}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Dodaj kierowcę
+                </button>
+              </div>
+              
+              {/* Add New Driver Form */}
+              {isAddingNewDriver && (
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 space-y-4">
+                  <h4 className="font-bold text-gray-900">Nowy kierowca</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-gray-600 mb-2">Imię i nazwisko</label>
+                      <input
+                        type="text"
+                        value={newDriverName}
+                        onChange={(e) => setNewDriverName(e.target.value)}
+                        placeholder="Jan Kowalski"
+                        className="w-full bg-white border border-blue-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-gray-600 mb-2">Numer telefonu</label>
+                      <input
+                        type="tel"
+                        value={newDriverPhone}
+                        onChange={(e) => setNewDriverPhone(e.target.value)}
+                        placeholder="+31612345678"
+                        className="w-full bg-white border border-blue-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        if (newDriverName && newDriverPhone) {
+                          addDriver(newDriverName, newDriverPhone);
+                          setNewDriverName('');
+                          setNewDriverPhone('');
+                          setIsAddingNewDriver(false);
+                        }
+                      }}
+                      disabled={!newDriverName || !newDriverPhone}
+                      className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ✓ Zapisz
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsAddingNewDriver(false);
+                        setNewDriverName('');
+                        setNewDriverPhone('');
+                      }}
+                      className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-300 transition-all"
+                    >
+                      Anuluj
+                    </button>
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-4">
                 {drivers.map(driver => (
-                  <div key={driver.id} className="bg-white border border-blue-200 rounded-2xl p-6 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
-                        driver.status === 'available' ? 'bg-green-500' : 
-                        driver.status === 'busy' ? 'bg-amber-500' : 
-                        'bg-gray-400'
-                      }`}>
-                        {driver.name.charAt(0)}
+                  <div key={driver.id} className="bg-white border border-blue-200 rounded-2xl p-6">
+                    {editingDriver?.id === driver.id ? (
+                      /* Edit Mode */
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider text-gray-600 mb-2">Imię i nazwisko</label>
+                            <input
+                              type="text"
+                              value={editingDriver.name}
+                              onChange={(e) => setEditingDriver({ ...editingDriver, name: e.target.value })}
+                              className="w-full bg-white border border-blue-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs uppercase tracking-wider text-gray-600 mb-2">Numer telefonu</label>
+                            <input
+                              type="tel"
+                              value={editingDriver.phone}
+                              onChange={(e) => setEditingDriver({ ...editingDriver, phone: e.target.value })}
+                              className="w-full bg-white border border-blue-300 rounded-xl px-4 py-3 text-gray-900 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              updateDriver(driver.id, { name: editingDriver.name, phone: editingDriver.phone });
+                              setEditingDriver(null);
+                            }}
+                            className="px-5 py-2 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-all"
+                          >
+                            ✓ Zapisz
+                          </button>
+                          <button
+                            onClick={() => setEditingDriver(null)}
+                            className="px-5 py-2 bg-gray-200 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-300 transition-all"
+                          >
+                            Anuluj
+                          </button>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-gray-900">{driver.name}</p>
-                        <p className="text-sm text-gray-600">{driver.phone}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {driver.activeDeliveries > 0 ? `${driver.activeDeliveries} aktywnych dostaw` : 'Brak aktywnych dostaw'}
-                        </p>
+                    ) : (
+                      /* Display Mode */
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${
+                            driver.status === 'available' ? 'bg-green-500' : 
+                            driver.status === 'busy' ? 'bg-amber-500' : 
+                            'bg-gray-400'
+                          }`}>
+                            {driver.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900">{driver.name}</p>
+                            <p className="text-sm text-gray-600">{driver.phone}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {driver.activeDeliveries > 0 ? `${driver.activeDeliveries} aktywnych dostaw` : 'Brak aktywnych dostaw'}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          <select
+                            value={driver.status}
+                            onChange={(e) => updateDriverStatus(driver.id, e.target.value as any)}
+                            aria-label={`Zmień status kierowcy ${driver.name}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border-2 outline-none transition-all ${
+                              driver.status === 'available' ? 'bg-green-50 border-green-300 text-green-700' :
+                              driver.status === 'busy' ? 'bg-amber-50 border-amber-300 text-amber-700' :
+                              'bg-gray-50 border-gray-300 text-gray-700'
+                            }`}
+                          >
+                            <option value="available">✓ Dostępny</option>
+                            <option value="busy">🚗 Zajęty</option>
+                            <option value="offline">⏸ Offline</option>
+                          </select>
+                          
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => setEditingDriver({ id: driver.id, name: driver.name, phone: driver.phone })}
+                            className="p-2 bg-blue-100 text-blue-600 rounded-xl hover:bg-blue-200 transition-all"
+                            title="Edytuj kierowcę"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => {
+                              if (confirm(`Czy na pewno usunąć kierowcę ${driver.name}?`)) {
+                                removeDriver(driver.id);
+                              }
+                            }}
+                            className="p-2 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-all"
+                            title="Usuń kierowcę"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <select
-                        value={driver.status}
-                        onChange={(e) => updateDriverStatus(driver.id, e.target.value as any)}
-                        aria-label={`Zmień status kierowcy ${driver.name}`}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border-2 outline-none transition-all ${
-                          driver.status === 'available' ? 'bg-green-50 border-green-300 text-green-700' :
-                          driver.status === 'busy' ? 'bg-amber-50 border-amber-300 text-amber-700' :
-                          'bg-gray-50 border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        <option value="available">✓ Dostępny</option>
-                        <option value="busy">🚗 Zajęty</option>
-                        <option value="offline">⏸ Offline</option>
-                      </select>
-                    </div>
+                    )}
                   </div>
                 ))}
+                
+                {drivers.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Brak kierowców. Dodaj pierwszego kierowcę.
+                  </div>
+                )}
               </div>
               
               <div className="pt-4 border-t border-blue-200">

@@ -36,8 +36,9 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
   const t = TRANSLATIONS[language];
 
   const navItems: { id: View; label: string }[] = [
-    { id: 'home', label: 'Home' },
+    { id: 'home', label: t.home || 'Home' },
     { id: 'menu', label: t.ourMenu },
+    { id: 'reservations', label: t.reservationNav || 'Reserveren' },
     { id: 'about', label: t.aboutUs },
     { id: 'contact', label: t.contact }
   ];
@@ -102,26 +103,31 @@ const Header: React.FC<HeaderProps> = ({ onCartOpen, activeView, setView }) => {
                 <span className="text-[10px] font-bold uppercase tracking-widest">{language}</span>
               </button>
               
-              {/* Dropdown Menu - Teraz poprawnie wyświetlany dzięki braku overflow-hidden na rodzicu */}
-              <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} top-full mt-4 w-56 glass border border-zinc-800/80 rounded-3xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-500 py-3 shadow-3xl translate-y-2 group-hover:translate-y-0 z-50`}>
-                <div className="px-4 py-2 mb-2 border-b border-white/5">
-                  <span className="text-[8px] uppercase tracking-[0.3em] font-bold text-zinc-500">Select Language</span>
+              {/* Invisible bridge to maintain hover when moving to dropdown */}
+              <div className="absolute top-full left-0 right-0 h-2 bg-transparent" />
+              
+              {/* Dropdown Menu */}
+              <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50`}>
+                <div className="w-56 glass border border-zinc-800/80 rounded-3xl py-3 shadow-3xl">
+                  <div className="px-4 py-2 mb-2 border-b border-white/5">
+                    <span className="text-[8px] uppercase tracking-[0.3em] font-bold text-zinc-500">Select Language</span>
+                  </div>
+                  {LANGUAGES.map((l) => (
+                    <button
+                      key={l.code}
+                      onClick={() => setLanguage(l.code)}
+                      className={`w-full flex items-center justify-between px-5 py-3 text-xs hover:bg-white/10 transition-all cursor-pointer ${
+                        language === l.code ? 'text-blue-600 font-bold' : 'text-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span>{l.flag}</span>
+                        <span className="tracking-wide">{l.name}</span>
+                      </div>
+                      {language === l.code && <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(0,102,204,0.6)]" />}
+                    </button>
+                  ))}
                 </div>
-                {LANGUAGES.map((l) => (
-                  <button
-                    key={l.code}
-                    onClick={() => setLanguage(l.code)}
-                    className={`w-full flex items-center justify-between px-5 py-3 text-xs hover:bg-white/5 transition-all group/l ${
-                      language === l.code ? 'text-gold-400 font-bold' : 'text-zinc-400'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span>{l.flag}</span>
-                      <span className="tracking-wide">{l.name}</span>
-                    </div>
-                    {language === l.code && <div className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(0,102,204,0.6)]" />}
-                  </button>
-                ))}
               </div>
             </div>
 

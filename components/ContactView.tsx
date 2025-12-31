@@ -1,22 +1,30 @@
 
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { LanguageContext, SettingsContext } from '../index';
 import { TRANSLATIONS } from '../constants';
+import { contactService } from '../services/supabaseClient';
 
 const ContactView: React.FC = () => {
   const langCtx = useContext(LanguageContext);
   const settingsCtx = useContext(SettingsContext);
+  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  
   if (!langCtx || !settingsCtx) return null;
   const { language } = langCtx;
   const { settings } = settingsCtx;
   const t = TRANSLATIONS[language];
 
-  const fullAddress = `${settings.address}, ${settings.postalCode} ${settings.city}, ${settings.country}`;
+  // Use restaurant name + address for more accurate map location
+  const fullAddress = `Greek Irini, ${settings.address}, ${settings.postalCode} ${settings.city}, ${settings.country}`;
   const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(fullAddress)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
   
-  const whatsappNumber = settings.phone.replace(/\D/g, '');
+  // Restaurant phone number
+  const restaurantPhone = '0615869325';
+  const whatsappNumber = restaurantPhone.replace(/\D/g, '');
   const defaultMsg = encodeURIComponent(language === 'pl' ? `Dzień dobry! Piszę ze strony ${settings.name}...` : `Hallo! Ik schrijf vanaf de website van ${settings.name}...`);
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${defaultMsg}`;
+  const whatsappUrl = `https://wa.me/31${whatsappNumber}?text=${defaultMsg}`;
 
   return (
     <div className="pt-32 pb-24 px-4 bg-gradient-to-b from-white to-blue-50 animate-in fade-in duration-700">
@@ -31,21 +39,79 @@ const ContactView: React.FC = () => {
           <div className="glass p-8 md:p-12 rounded-[2.5rem] border border-blue-200 shadow-2xl relative overflow-hidden group">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-400 opacity-[0.05] blur-3xl group-hover:opacity-[0.12] transition-opacity duration-1000" />
             
-            <form className="space-y-6 relative z-10" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-6 relative z-10" onSubmit={async (e) => {
+              e.preventDefault();
+              if (!formData.name || !formData.email || !formData.message) return;
+              
+              setIsSubmitting(true);
+              setSubmitStatus('idle');
+              
+              try {
+                await contactService.submit(formData);
+                setSubmitStatus('success');
+                setFormData({ name: '', email: '', message: '' });
+                console.log('✅ Wiadomość kontaktowa wysłana do Supabase');
+              } catch (error) {
+                console.error('❌ Błąd wysyłania wiadomości:', error);
+                setSubmitStatus('error');
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}>
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-600 ml-2">{t.formName}</label>
-                <input type="text" className="w-full bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition-all text-sm text-gray-800" placeholder="John Doe" />
+                <input 
+                  type="text" 
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition-all text-sm text-gray-800" 
+                  placeholder="John Doe" 
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-600 ml-2">{t.formEmail}</label>
-                <input type="email" className="w-full bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition-all text-sm text-gray-800" placeholder="john@example.com" />
+                <input 
+                  type="email" 
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition-all text-sm text-gray-800" 
+                  placeholder="john@example.com" 
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-600 ml-2">{t.formMessage}</label>
-                <textarea rows={4} className="w-full bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition-all resize-none text-sm text-gray-800" placeholder="..." />
+                <textarea 
+                  rows={4} 
+                  value={formData.message}
+                  onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                  className="w-full bg-white/70 border border-blue-300 rounded-2xl px-6 py-4 outline-none focus:border-blue-600 transition-all resize-none text-sm text-gray-800" 
+                  placeholder="..." 
+                  required
+                />
               </div>
-              <button className="w-full py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-blue-400/20">
-                {t.formSubmit}
+              
+              {/* Success/Error messages */}
+              {submitStatus === 'success' && (
+                <div className="p-4 bg-green-100 border border-green-300 rounded-2xl text-green-700 text-sm text-center">
+                  {language === 'pl' ? '✅ Wiadomość została wysłana! Odpowiemy wkrótce.' : '✅ Bericht verzonden! We nemen snel contact op.'}
+                </div>
+              )}
+              {submitStatus === 'error' && (
+                <div className="p-4 bg-red-100 border border-red-300 rounded-2xl text-red-700 text-sm text-center">
+                  {language === 'pl' ? '❌ Błąd wysyłania. Spróbuj ponownie lub zadzwoń.' : '❌ Fout bij verzenden. Probeer opnieuw of bel ons.'}
+                </div>
+              )}
+              
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-blue-400/20 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isSubmitting 
+                  ? (language === 'pl' ? 'Wysyłanie...' : 'Verzenden...') 
+                  : t.formSubmit}
               </button>
             </form>
           </div>
@@ -76,7 +142,7 @@ const ContactView: React.FC = () => {
                       </p>
                     </div>
                     <a 
-                      href={`tel:${settings.phone}`} 
+                      href={`tel:${restaurantPhone}`} 
                       className="inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-[0.3em] text-[10px] rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50"
                     >
                       {language === 'pl' ? 'ZADZWOŃ TERAZ' : 'BEL NU'}
@@ -155,7 +221,7 @@ const ContactView: React.FC = () => {
               </div>
               <div className="glass p-8 rounded-[2rem] border border-blue-200">
                 <p className="text-[9px] uppercase tracking-widest text-gray-600 font-bold mb-2">Call Us</p>
-                <p className="text-sm text-gray-800 font-medium">{settings.phone}</p>
+                <p className="text-sm text-gray-800 font-medium">{restaurantPhone}</p>
               </div>
             </div>
           </div>

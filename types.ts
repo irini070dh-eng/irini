@@ -1,7 +1,7 @@
 
 export type Language = 'nl' | 'el' | 'tr' | 'ar' | 'bg' | 'pl';
 
-export type View = 'home' | 'menu' | 'contact' | 'about' | 'admin' | 'checkout' | 'order-confirmation';
+export type View = 'home' | 'menu' | 'contact' | 'about' | 'admin' | 'checkout' | 'order-confirmation' | 'reservations';
 
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivery' | 'completed' | 'cancelled';
 
@@ -284,4 +284,23 @@ export const DEFAULT_RESTAURANT_SETTINGS: RestaurantSettings = {
 export interface CartItem {
   id: string;
   quantity: number;
+}
+
+// Reservation System Types
+export type ReservationStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled';
+
+export interface Reservation {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  date: string; // YYYY-MM-DD format
+  time: string; // HH:MM format
+  numberOfGuests: number;
+  specialRequests?: string;
+  status: ReservationStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  adminNotes?: string;
+  confirmationSentAt?: Date;
 }

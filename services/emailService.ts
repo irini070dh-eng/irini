@@ -1,5 +1,5 @@
 import emailjs from '@emailjs/browser';
-import { Order, Language } from '../types';
+import { Order, Language, Reservation } from '../types';
 
 // EmailJS Configuration
 // Musisz skonfigurować te wartości na https://www.emailjs.com/
@@ -169,8 +169,199 @@ export const getEmailJSConfig = () => ({
   config: EMAILJS_CONFIG,
 });
 
+// ===== RESERVATION EMAIL FUNCTIONS =====
+
+// Generowanie treści emaila dla potwierdzenia rezerwacji
+export const generateReservationConfirmationEmail = (
+  reservation: Reservation,
+  adminNotes: string = '',
+  language: Language = 'nl'
+) => {
+  const isPolish = language === 'pl';
+  
+  const greeting = isPolish 
+    ? `Dzień dobry ${reservation.name}!`
+    : `Goedendag ${reservation.name}!`;
+  
+  const confirmationMessage = isPolish
+    ? `Z przyjemnością potwierdzamy Twoją rezerwację w Greek Irini!\n\nJest nam niezmiernie miło móc gościć Cię w naszej rodzinnej restauracji. Czekamy z niecierpliwością, aby podzielić się z Tobą autentyczną grecką gościnnością i tradycyjnymi smakami prosto z wybrzeży Morza Egejskiego.`
+    : `Met veel plezier bevestigen wij uw reservering bij Greek Irini!\n\nHet is ons een eer u te mogen verwelkomen in ons familierestaurant. We kijken ernaar uit om authentieke Griekse gastvrijheid en traditionele smaken van de Egeïsche kust met u te delen.`;
+  
+  const detailsTitle = isPolish ? 'Szczegóły Twojej Rezerwacji:' : 'Details van uw reservering:';
+  
+  const dateLabel = isPolish ? 'Data' : 'Datum';
+  const timeLabel = isPolish ? 'Czas' : 'Tijd';
+  const guestsLabel = isPolish ? 'Liczba gości' : 'Aantal gasten';
+  const notesLabel = isPolish ? 'Dodatkowe informacje' : 'Aanvullende informatie';
+  
+  const closingMessage = isPolish
+    ? `Do zobaczenia wkrótce w Greek Irini!\n\nZ wyrazami szacunku,\nZespół Greek Irini\n\nWeimarstraat 174, 2562 HD Den Haag\nTel: 0615869325\nEmail: irini070dh@gmail.com`
+    : `Tot ziens bij Greek Irini!\n\nMet vriendelijke groet,\nTeam Greek Irini\n\nWeimarstraat 174, 2562 HD Den Haag\nTel: 0615869325\nEmail: irini070dh@gmail.com`;
+
+  return {
+    to_email: reservation.email,
+    to_name: reservation.name,
+    subject: isPolish 
+      ? `✓ Potwierdzenie rezerwacji - Greek Irini`
+      : `✓ Reserveringsbevestiging - Greek Irini`,
+    greeting,
+    message: confirmationMessage,
+    details_title: detailsTitle,
+    date_label: dateLabel,
+    date: reservation.date,
+    time_label: timeLabel,
+    time: reservation.time,
+    guests_label: guestsLabel,
+    guests: reservation.guests.toString(),
+    special_requests: reservation.specialRequests || (isPolish ? 'Brak' : 'Geen'),
+    notes_label: notesLabel,
+    admin_notes: adminNotes || (isPolish ? 'Wszystko przygotowane!' : 'Alles is klaar voor u!'),
+    closing: closingMessage,
+    restaurant_name: 'Greek Irini',
+  };
+};
+
+// Generowanie treści emaila dla odrzucenia rezerwacji
+export const generateReservationRejectionEmail = (
+  reservation: Reservation,
+  alternativeTime: string = '',
+  language: Language = 'nl'
+) => {
+  const isPolish = language === 'pl';
+  
+  const greeting = isPolish 
+    ? `Dzień dobry ${reservation.name},`
+    : `Goedendag ${reservation.name},`;
+  
+  const sorryMessage = isPolish
+    ? `Bardzo nam przykro, ale niestety nie możemy potwierdzić Twojej rezerwacji na dzień ${reservation.date} o godzinie ${reservation.time}.\n\nW tym terminie mamy już komplety rezerwacji.`
+    : `Het spijt ons zeer, maar helaas kunnen we uw reservering voor ${reservation.date} om ${reservation.time} niet bevestigen.\n\nOp dit moment zijn we voor deze tijd volledig volgeboekt.`;
+  
+  const alternativeMessage = alternativeTime
+    ? (isPolish 
+        ? `\n\nCzy może pasowałaby Państwu inna godzina: ${alternativeTime}?\n\nJeśli tak, prosimy o kontakt telefoniczny lub mailowy, a chętnie dokonamy rezerwacji.`
+        : `\n\nZou het eventueel mogelijk zijn op een ander tijdstip: ${alternativeTime}?\n\nAls dit schikt, neem dan gerust contact met ons op en we maken graag een nieuwe reservering voor u.`)
+    : (isPolish
+        ? `\n\nProsimy o kontakt w celu ustalenia alternatywnego terminu. Chętnie znajdziemy dla Państwa odpowiednią godzinę.`
+        : `\n\nNeem gerust contact met ons op voor een alternatief tijdstip. We helpen graag bij het vinden van een geschikt moment.`);
+  
+  const closingMessage = isPolish
+    ? `Przepraszamy za niedogodności i mamy nadzieję, że wkrótce będziemy mogli Państwa gościć!\n\nZ wyrazami szacunku,\nZespół Greek Irini\n\nWeimarstraat 174, 2562 HD Den Haag\nTel: 0615869325\nEmail: irini070dh@gmail.com`
+    : `Onze excuses voor het ongemak en we hopen u binnenkort te mogen verwelkomen!\n\nMet vriendelijke groet,\nTeam Greek Irini\n\nWeimarstraat 174, 2562 HD Den Haag\nTel: 0615869325\nEmail: irini070dh@gmail.com`;
+
+  return {
+    to_email: reservation.email,
+    to_name: reservation.name,
+    subject: isPolish 
+      ? `Rezerwacja w Greek Irini - Prośba o kontakt`
+      : `Reservering bij Greek Irini - Verzoek tot contact`,
+    greeting,
+    message: sorryMessage + alternativeMessage,
+    closing: closingMessage,
+    restaurant_name: 'Greek Irini',
+  };
+};
+
+// Wysyłanie emaila z potwierdzeniem rezerwacji
+export const sendReservationConfirmationEmail = async (
+  reservation: Reservation,
+  adminNotes: string = '',
+  language: Language = 'nl'
+): Promise<{ success: boolean; message: string }> => {
+  
+  if (!isConfigured()) {
+    console.log('📧 EmailJS nie skonfigurowany - symulacja wysyłki emaila rezerwacji');
+    console.log('📧 Dane emaila:', generateReservationConfirmationEmail(reservation, adminNotes, language));
+    
+    return {
+      success: true,
+      message: 'Email potwierdzenia wysłany (tryb demo)',
+    };
+  }
+
+  try {
+    emailjs.init(EMAILJS_CONFIG.publicKey);
+    
+    const emailData = generateReservationConfirmationEmail(reservation, adminNotes, language);
+    
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.serviceId,
+      EMAILJS_CONFIG.templateId,
+      emailData
+    );
+
+    console.log('✅ Email potwierdzenia rezerwacji wysłany:', response);
+    
+    return {
+      success: true,
+      message: language === 'pl' 
+        ? 'Potwierdzenie rezerwacji wysłane na email!' 
+        : 'Reserveringsbevestiging verzonden!',
+    };
+  } catch (error) {
+    console.error('❌ Błąd wysyłania emaila rezerwacji:', error);
+    
+    return {
+      success: false,
+      message: language === 'pl'
+        ? 'Nie udało się wysłać emaila.'
+        : 'E-mail kon niet worden verzonden.',
+    };
+  }
+};
+
+// Wysyłanie emaila z odrzuceniem rezerwacji
+export const sendReservationRejectionEmail = async (
+  reservation: Reservation,
+  alternativeTime: string = '',
+  language: Language = 'nl'
+): Promise<{ success: boolean; message: string }> => {
+  
+  if (!isConfigured()) {
+    console.log('📧 EmailJS nie skonfigurowany - symulacja wysyłki emaila odrzucenia');
+    console.log('📧 Dane emaila:', generateReservationRejectionEmail(reservation, alternativeTime, language));
+    
+    return {
+      success: true,
+      message: 'Email odrzucenia wysłany (tryb demo)',
+    };
+  }
+
+  try {
+    emailjs.init(EMAILJS_CONFIG.publicKey);
+    
+    const emailData = generateReservationRejectionEmail(reservation, alternativeTime, language);
+    
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.serviceId,
+      EMAILJS_CONFIG.templateId,
+      emailData
+    );
+
+    console.log('✅ Email odrzucenia rezerwacji wysłany:', response);
+    
+    return {
+      success: true,
+      message: language === 'pl' 
+        ? 'Email wysłany!' 
+        : 'E-mail verzonden!',
+    };
+  } catch (error) {
+    console.error('❌ Błąd wysyłania emaila:', error);
+    
+    return {
+      success: false,
+      message: language === 'pl'
+        ? 'Nie udało się wysłać emaila.'
+        : 'E-mail kon niet worden verzonden.',
+    };
+  }
+};
+
 export default {
   sendOrderConfirmationEmail,
   generateEmailContent,
   getEmailJSConfig,
+  sendReservationConfirmationEmail,
+  sendReservationRejectionEmail,
 };
