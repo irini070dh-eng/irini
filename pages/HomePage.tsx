@@ -44,6 +44,13 @@ const ADVERTISEMENTS_DATA = [
     description: 'Weź udział w naszym konkursie!',
     videoUrl: '/videos/konkurs.mp4',
     thumbnailUrl: '/videos/konkurs.jpg'
+  },
+  {
+    id: 4,
+    title: 'Święta 2025',
+    description: 'Świąteczne potrawy i specjalne menu na święta!',
+    videoUrl: '/SWIETA2025.mp4',
+    thumbnailUrl: '/SWIETA2025.png'
   }
 ];
 
