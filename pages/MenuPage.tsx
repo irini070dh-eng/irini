@@ -129,12 +129,12 @@ const LightboxModal: React.FC<{ item: MenuItem; onClose: () => void }> = ({ item
                 
                 <div className="w-full md:w-1/2 h-64 md:h-auto flex-shrink-0 relative group">
                     <img 
-                        src="/images/logo.linku.jpeg" 
+                        src={`/images/${item.imageIds[currentImageIndex]}`} 
                         alt={t(item.name)}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                            console.error('Failed to load logo image');
-                            e.currentTarget.src = '/images/logo.linku.jpeg';
+                            console.error(`Failed to load image: /images/${item.imageIds[currentImageIndex]}`);
+                            e.currentTarget.src = 'https://via.placeholder.com/400x400?text=No+Image';
                         }}
                     />
                     {item.imageIds.length > 1 && (
@@ -269,12 +269,12 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
                                         <div className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden border-2 border-folk-red/20 group-hover:border-folk-red/60 transition-colors duration-300">
                                             <img
                                                 loading="lazy"
-                                                src="/images/logo.linku.jpeg"
+                                                src={`/images/${item.imageIds[0]}`}
                                                 alt={t(item.name)}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                                 onError={(e) => {
-                                                    console.error('Failed to load logo image');
-                                                    e.currentTarget.src = '/images/logo.linku.jpeg';
+                                                    console.error(`Failed to load thumbnail: /images/${item.imageIds[0]}`);
+                                                    e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
                                                 }}
                                             />
                                         </div>
