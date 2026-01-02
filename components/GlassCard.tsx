@@ -15,7 +15,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
 }) => {
   const baseClasses = `
     relative group overflow-hidden
-    bg-white/10 dark:bg-black/20
+    bg-white/10
     backdrop-blur-2xl backdrop-saturate-150
     border border-white/20
     rounded-3xl p-6 md:p-8
@@ -69,3 +69,4 @@ if (typeof window !== 'undefined' && !document.getElementById('glasscard-style')
   `;
   document.head.appendChild(style);
 }
+

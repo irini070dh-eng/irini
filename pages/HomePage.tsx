@@ -22,6 +22,31 @@ const HERO_IMAGES = [
   'o nas.png'
 ];
 
+// Advertisements/promotional videos data
+const ADVERTISEMENTS_DATA = [
+  {
+    id: 1,
+    title: 'Weekendowa Promocja',
+    description: 'Specjalne oferty na weekendy - zobacz naszą najnowszą reklamę!',
+    videoUrl: '/videos/weekendowa-promocja.mp4',
+    thumbnailUrl: '/videos/weekendowa-promocja-poster.jpg'
+  },
+  {
+    id: 2,
+    title: 'Smak Tradycji',
+    description: 'Odkryj autentyczne smaki polskiej kuchni!',
+    videoUrl: '/videos/smak-tradycji.mp4',
+    thumbnailUrl: '/videos/smak-tradycji.jpg'
+  },
+  {
+    id: 3,
+    title: 'Konkurs',
+    description: 'Weź udział w naszym konkursie!',
+    videoUrl: '/videos/konkurs.mp4',
+    thumbnailUrl: '/videos/konkurs.jpg'
+  }
+];
+
 
 
 
@@ -56,6 +81,8 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
     const [flippedCards, setFlippedCards] = useState(new Set<number>());
     const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
     const [scrollY, setScrollY] = useState(0);
+    const [currentAdIndex, setCurrentAdIndex] = useState(0);
+    const [playingVideos, setPlayingVideos] = useState(new Set<number>());
     const heroRef = useRef<HTMLDivElement>(null);
 
     // Parallax scroll effect
@@ -66,6 +93,20 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+    const handleVideoClick = (videoId: number, videoElement: HTMLVideoElement) => {
+        if (playingVideos.has(videoId)) {
+            videoElement.pause();
+            setPlayingVideos(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(videoId);
+                return newSet;
+            });
+        } else {
+            videoElement.play();
+            setPlayingVideos(prev => new Set(prev).add(videoId));
+        }
+    };
+    
 
     // Hero image carousel effect
     useEffect(() => {
@@ -94,27 +135,15 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
 
         return () => clearInterval(teamCarouselInterval);
     }, []);
-    
-    const heroOverlayBg = {
-        light: 'bg-black/60',
-        dark: 'bg-black/70',
-        wood: 'bg-black/70',
-        flower: 'bg-black/70',
-    }[theme];
 
-    const aboutUsBg = {
-        light: 'bg-secondary-light/80',
-        dark: 'bg-secondary-dark/30',
-        wood: 'bg-secondary-dark/30',
-        flower: 'bg-secondary-dark/30',
-    }[theme];
+    // Advertisements carousel effect
+    useEffect(() => {
+        const adCarouselInterval = setInterval(() => {
+            setCurrentAdIndex(prev => (prev + 1) % ADVERTISEMENTS_DATA.length);
+        }, 6000); // Change ad every 6 seconds
 
-    const cardBaseBg = {
-        light: 'bg-white',
-        dark: 'bg-secondary-dark',
-        wood: 'bg-secondary-dark',
-        flower: 'bg-secondary-dark',
-    };
+        return () => clearInterval(adCarouselInterval);
+    }, []);
 
     const nextOccasion = useCallback(() => {
         setCurrentOccasionIndex(prev => (prev + 1) % OCCASIONS_DATA.length);
@@ -176,7 +205,7 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                 backgroundRepeat: 'no-repeat'
                             }}
                         />
-                        <div className={`absolute inset-0 ${heroOverlayBg}`}></div>
+                        <div className="absolute inset-0 bg-black/60"></div>
                     </div>
                 ))}
                 
@@ -242,7 +271,7 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
             {/* About Us */}
             <AnimatedSection className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div 
-                    className="relative p-6"
+                    className="relative p-4 sm:p-6 md:p-8"
                     style={{
                         backgroundImage: "url('/images/TŁO O NAS .jpg')",
                         backgroundSize: 'cover',
@@ -252,18 +281,18 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                     }}
                 >
                     {/* Dark overlay for better text readability */}
-                    <div className="absolute inset-0 bg-black/50 dark:bg-black/60 rounded-2xl"></div>
+                    <div className="absolute inset-0 bg-black/50 rounded-2xl"></div>
                     
                     <div className="relative z-10">
-                        <FlowerArtCorner className="absolute top-0 left-0 w-24 h-24 text-folk-red opacity-10 dark:opacity-20 pointer-events-none" />
-                        <FlowerArtCorner className="absolute top-0 right-0 w-24 h-24 text-folk-red opacity-10 dark:opacity-20 pointer-events-none transform rotate-90" />
-                        <FlowerArtCorner className="absolute bottom-0 left-0 w-24 h-24 text-folk-red opacity-10 dark:opacity-20 pointer-events-none transform -rotate-90" />
-                        <FlowerArtCorner className="absolute bottom-0 right-0 w-24 h-24 text-folk-red opacity-10 dark:opacity-20 pointer-events-none transform rotate-180" />
-                        <FolkArtFlowerFrame className="absolute inset-0 w-full h-full text-folk-red/20 dark:text-folk-blue/20" />
-                        <div className="relative grid md:grid-cols-2 gap-12 items-center backdrop-blur-md p-8 rounded-lg shadow-xl">
+                        <FlowerArtCorner className="absolute top-0 left-0 w-24 h-24 text-folk-red opacity-10 pointer-events-none" />
+                        <FlowerArtCorner className="absolute top-0 right-0 w-24 h-24 text-folk-red opacity-10 pointer-events-none transform rotate-90" />
+                        <FlowerArtCorner className="absolute bottom-0 left-0 w-24 h-24 text-folk-red opacity-10 pointer-events-none transform -rotate-90" />
+                        <FlowerArtCorner className="absolute bottom-0 right-0 w-24 h-24 text-folk-red opacity-10 pointer-events-none transform rotate-180" />
+                        <FolkArtFlowerFrame className="absolute inset-0 w-full h-full text-folk-red/20" />
+                        <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center backdrop-blur-md p-4 sm:p-6 md:p-8 rounded-lg shadow-xl">
                             <div className="flex justify-center items-center">
                                 <div 
-                                    className="w-80 h-80 rounded-full overflow-hidden shadow-2xl border-4 border-folk-red/30 relative"
+                                    className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full overflow-hidden shadow-2xl border-4 border-folk-red/30 relative"
                                     style={{
                                         backgroundImage: "url('/images/TŁO MENU.png')",
                                         backgroundSize: 'cover',
@@ -275,13 +304,13 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <img 
                                             loading="lazy" 
-                                            src="/images/logo o nas.png" 
+                                            src="/images/logo.linku.jpeg" 
                                             alt="Leniwa Baba Logo" 
-                                            className="w-48 h-48 object-contain drop-shadow-lg"
+                                            className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-cover rounded-full drop-shadow-lg"
                                             onError={(e) => {
                                                 console.error('Failed to load logo image');
                                                 // Try fallback image
-                                                e.currentTarget.src = '/images/o nas.png';
+                                                e.currentTarget.src = '/images/logo.linku.jpeg';
                                                 e.currentTarget.onerror = null;
                                             }}
                                         />
@@ -289,8 +318,8 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                 </div>
                             </div>
                             <div>
-                                <h2 className="text-4xl font-bold text-white font-serif mb-4 drop-shadow-lg">{t('about_us_title')}</h2>
-                                <p className="text-lg text-white leading-relaxed drop-shadow-lg">{t('about_us_text')}</p>
+                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white font-serif mb-4 drop-shadow-lg">{t('about_us_title')}</h2>
+                                <p className="text-base sm:text-lg text-white leading-relaxed drop-shadow-lg">{t('about_us_text')}</p>
                             </div>
                         </div>
                     </div>
@@ -303,19 +332,19 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                     <div className="inline-block glass-card px-6 py-2 rounded-full mb-6 backdrop-blur-md">
                         <span className="text-folk-red font-semibold text-sm uppercase tracking-wider">{t('our_team_label')}</span>
                     </div>
-                    <h2 className="text-5xl md:text-6xl font-bold text-gradient-premium font-serif mb-6 text-premium-glow">
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gradient-premium font-serif mb-6 text-premium-glow">
                         {t('our_team_title')}
                     </h2>
-                    <p className="text-lg text-text-dark-secondary dark:text-text-light-secondary max-w-2xl mx-auto">
+                    <p className="text-base sm:text-lg text-text-dark-secondary max-w-2xl mx-auto">
                         {t('our_team_description')}
                     </p>
                 </div>
                 
-                <div className="relative flex justify-center items-center h-[32rem]">
+                <div className="relative flex justify-center items-center h-[24rem] sm:h-[28rem] md:h-[32rem]">
                     {/* Navigation Buttons - Premium Style */}
                     <button 
                         onClick={prevTeamMember} 
-                        className="absolute left-0 md:-left-12 z-30 glass-card p-3 rounded-full text-white hover:scale-110 transition-all duration-300 hover:ring-2 hover:ring-folk-red/50 backdrop-blur-md"
+                        className="absolute left-0 sm:left-2 md:-left-12 z-30 glass-card p-2 sm:p-3 rounded-full text-white hover:scale-110 transition-all duration-300 hover:ring-2 hover:ring-folk-red/50 backdrop-blur-md"
                         title="Poprzedni członek zespołu"
                         aria-label="Poprzedni członek zespołu"
                     >
@@ -323,7 +352,7 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                     </button>
                     <button 
                         onClick={nextTeamMember} 
-                        className="absolute right-0 md:-right-12 z-30 glass-card p-3 rounded-full text-white hover:scale-110 transition-all duration-300 hover:ring-2 hover:ring-folk-red/50 backdrop-blur-md"
+                        className="absolute right-0 sm:right-2 md:-right-12 z-30 glass-card p-2 sm:p-3 rounded-full text-white hover:scale-110 transition-all duration-300 hover:ring-2 hover:ring-folk-red/50 backdrop-blur-md"
                         title="Następny członek zespołu"
                         aria-label="Następny członek zespołu"
                     >
@@ -370,7 +399,7 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                 >
                                     <div className="flex justify-center items-center h-full">
                                         <div 
-                                            className={`relative w-72 h-80 rounded-2xl shadow-2xl transition-all duration-700 ${cardBaseBg[theme]} border-2 border-folk-red/30 hover:border-folk-red/60 overflow-hidden`}
+                                            className="relative w-72 h-80 rounded-2xl shadow-2xl transition-all duration-700 bg-white border-2 border-folk-red/30 hover:border-folk-red/60 overflow-hidden"
                                             style={{ 
                                                 transform: `scale(${scale})`,
                                                 backgroundImage: "url('/images/TŁO MENU.png')",
@@ -402,7 +431,7 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                                 </div>
                                                 
                                                 {/* Member Info */}
-                                                <div className="text-text-dark dark:text-white">
+                                                <div className="text-text-dark">
                                                     <h3 className="text-xl font-bold font-serif mb-2 drop-shadow-lg">
                                                         {t(member.positionKey)}
                                                     </h3>
@@ -521,14 +550,14 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                                 )}
                                             </div>
                                             {/* Back Face */}
-                                            <div className={`absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-lg shadow-2xl overflow-hidden p-6 flex flex-col justify-center items-center text-center ${cardBaseBg[theme]} border-2 border-folk-red/30`}>
+                                            <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-lg shadow-2xl overflow-hidden p-6 flex flex-col justify-center items-center text-center bg-white border-2 border-folk-red/30">
                                                 <FlowerArtCorner className="absolute top-0 left-0 w-20 h-20 text-folk-red opacity-20 pointer-events-none" />
                                                 <FlowerArtCorner className="absolute top-0 right-0 w-20 h-20 text-folk-red opacity-20 pointer-events-none transform rotate-90" />
                                                 <FlowerArtCorner className="absolute bottom-0 left-0 w-20 h-20 text-folk-red opacity-20 pointer-events-none transform -rotate-90" />
                                                 <FlowerArtCorner className="absolute bottom-0 right-0 w-20 h-20 text-folk-red opacity-20 pointer-events-none transform rotate-180" />
                                                 <div className="relative z-10">
                                                     <h4 className="text-2xl font-serif font-bold text-folk-red mb-3">{t(occasion.key)}</h4>
-                                                    <p className="text-sm text-text-dark-secondary dark:text-text-light-secondary mb-5">{t(occasion.descriptionKey)}</p>
+                                                    <p className="text-sm text-text-dark-secondary mb-5">{t(occasion.descriptionKey)}</p>
                                                     <a
                                                         href="#reservation"
                                                         className="inline-flex items-center justify-center px-6 py-2 mt-2 text-base font-semibold text-black bg-gradient-to-r from-[#FFD700] via-[#FFA500] to-[#FFD700] rounded-md shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 ease-out"
@@ -548,7 +577,7 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
 
             {/* Competition Section - Nederlandse Horeca Prijzen */}
             <AnimatedSection className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-900/20 dark:via-yellow-900/20 dark:to-orange-900/20 border-4 border-amber-300 dark:border-amber-600 shadow-2xl">
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 border-4 border-amber-300 shadow-2xl">
                     {/* Decorative elements */}
                     <div className="absolute top-0 left-0 w-full h-full opacity-5">
                         <div className="absolute top-4 left-4 w-16 h-16 bg-amber-400 rounded-full animate-pulse"></div>
@@ -567,21 +596,21 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                         <div className="grid md:grid-cols-2 gap-8 items-center">
                             {/* Text Content */}
                             <div className="text-center md:text-left">
-                                <div className="inline-block glass-card px-6 py-2 rounded-full mb-6 backdrop-blur-md bg-amber-100/50 dark:bg-amber-900/50 border border-amber-300 dark:border-amber-600">
-                                    <span className="text-amber-800 dark:text-amber-200 font-semibold text-sm uppercase tracking-wider">
+                                <div className="inline-block glass-card px-6 py-2 rounded-full mb-6 backdrop-blur-md bg-amber-100/50 border border-amber-300">
+                                    <span className="text-amber-800 font-semibold text-sm uppercase tracking-wider">
                                         🏆 Konkurs 2025/2026
                                     </span>
                                 </div>
                                 
-                                <h2 className="text-3xl md:text-4xl font-bold text-amber-900 dark:text-amber-100 font-serif mb-4 leading-tight">
+                                <h2 className="text-3xl md:text-4xl font-bold text-amber-900 font-serif mb-4 leading-tight">
                                     {t('competition_title')}
                                 </h2>
                                 
-                                <h3 className="text-xl md:text-2xl font-semibold text-amber-800 dark:text-amber-200 mb-6">
+                                <h3 className="text-xl md:text-2xl font-semibold text-amber-800 mb-6">
                                     {t('competition_subtitle')}
                                 </h3>
                                 
-                                <p className="text-amber-700 dark:text-amber-300 leading-relaxed mb-8 text-lg">
+                                <p className="text-amber-700 leading-relaxed mb-8 text-lg">
                                     {t('competition_description')}
                                 </p>
                                 
@@ -621,6 +650,128 @@ export const HomePage: React.FC<PageProps> = ({ id }) => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </AnimatedSection>
+
+            {/* Advertisements Section - Filmy reklamowe */}
+            <AnimatedSection className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="text-center mb-12">
+                    <div className="inline-block glass-card px-6 py-2 rounded-full mb-6 backdrop-blur-md">
+                        <span className="text-folk-blue font-semibold text-sm uppercase tracking-wider">{t('our_videos')}</span>
+                    </div>
+                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-folk-blue font-serif mb-4">
+                        Zobacz nasze reklamy
+                    </h2>
+                    <p className="text-base sm:text-lg md:text-xl text-text-dark-secondary max-w-2xl mx-auto">
+                        Odkryj magię polskiej kuchni w naszych filmach promocyjnych
+                    </p>
+                </div>
+
+                <div className="relative max-w-6xl mx-auto">
+                    <div className="flex justify-center">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl">
+                            {ADVERTISEMENTS_DATA.map((ad, index) => {
+                                const offset = (index - currentAdIndex + ADVERTISEMENTS_DATA.length) % ADVERTISEMENTS_DATA.length;
+                                const isCenter = offset === 0;
+                                const isLeft = offset === ADVERTISEMENTS_DATA.length - 1;
+                                const isRight = offset === 1;
+                                const isVisible = isCenter || isLeft || isRight;
+
+                                return (
+                                    <div
+                                        key={ad.id}
+                                        className={`transition-all duration-700 transform ${
+                                            !isVisible ? 'hidden md:block opacity-0 scale-75' : 
+                                            isCenter ? 'opacity-100 scale-105 ring-4 ring-folk-blue shadow-2xl shadow-folk-blue/50' :
+                                            'opacity-70 scale-95'
+                                        } ${isCenter ? 'z-20' : 'z-10'}`}
+                                        style={{
+                                            transform: !isVisible ? 'scale(0.75)' :
+                                                     isCenter ? 'scale(1.05)' : 'scale(0.95)'
+                                        }}
+                                    >
+                                        <div 
+                                            className="relative w-full max-w-sm mx-auto aspect-[9/16] sm:aspect-[3/4] rounded-lg overflow-hidden shadow-lg group cursor-pointer bg-gray-900"
+                                            onClick={(e) => {
+                                                const video = e.currentTarget.querySelector('video');
+                                                if (video) handleVideoClick(ad.id, video);
+                                            }}
+                                        >
+                                            <video 
+                                                className="w-full h-full object-cover"
+                                                poster={ad.thumbnailUrl}
+                                                muted={!playingVideos.has(ad.id)}
+                                                controls={playingVideos.has(ad.id)}
+                                                loop
+                                                playsInline
+                                                onError={(e) => {
+                                                    console.warn(`Video failed to load: ${ad.videoUrl}, falling back to thumbnail`);
+                                                    e.currentTarget.style.display = 'none';
+                                                    const fallbackImg = e.currentTarget.nextElementSibling as HTMLImageElement;
+                                                    if (fallbackImg) {
+                                                        fallbackImg.style.display = 'block';
+                                                    }
+                                                }}
+                                            >
+                                                <source src={ad.videoUrl} type="video/mp4" />
+                                                Twoja przeglądarka nie obsługuje video.
+                                            </video>
+                                            
+                                            {/* Fallback image */}
+                                            <img 
+                                                src={ad.thumbnailUrl} 
+                                                alt={ad.title} 
+                                                className="w-full h-full object-cover hidden" 
+                                                onError={(e) => {
+                                                    console.error(`Both video and thumbnail failed for: ${ad.title}`);
+                                                    e.currentTarget.style.backgroundColor = '#1f2937';
+                                                    e.currentTarget.style.display = 'flex';
+                                                    e.currentTarget.style.alignItems = 'center';
+                                                    e.currentTarget.style.justifyContent = 'center';
+                                                    e.currentTarget.innerHTML = '<div style="color: #9ca3af; text-align: center;">Brak filmu</div>';
+                                                }}
+                                            />
+                                            
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                            <div className="absolute bottom-4 left-4 right-4 text-white">
+                                                <h3 className="text-lg sm:text-xl font-bold font-serif mb-2 [text-shadow:_1px_1px_2px_rgb(0_0_0_/_80%)]">
+                                                    {ad.title}
+                                                </h3>
+                                                <p className="text-xs sm:text-sm [text-shadow:_1px_1px_2px_rgb(0_0_0_/_80%)]">
+                                                    {ad.description}
+                                                </p>
+                                            </div>
+                                            
+                                            {/* Play button overlay */}
+                                            <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${playingVideos.has(ad.id) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                                                <div className="bg-folk-blue/80 rounded-full p-4 backdrop-blur-sm">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M8 5v14l11-7z"/>
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Indicators */}
+                    <div className="flex justify-center mt-8 space-x-2">
+                        {ADVERTISEMENTS_DATA.map((_, index) => (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentAdIndex(index)}
+                                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                                    index === currentAdIndex 
+                                        ? 'bg-folk-blue scale-125 ring-2 ring-white/50' 
+                                        : 'bg-gray-400 hover:bg-gray-600'
+                                }`}
+                                aria-label={`Przejdź do reklamy ${index + 1}`}
+                            />
+                        ))}
                     </div>
                 </div>
             </AnimatedSection>

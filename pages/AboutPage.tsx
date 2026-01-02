@@ -27,7 +27,7 @@ const AboutPage: React.FC = () => {
             onClick={() => setTab(1)}
           >Zespół</button>
           <button
-            className={`px-8 py-3 rounded-full font-bold text-lg shadow-lg transition-all duration-300 border-2 border-folk-yellow/60 bg-folk-yellow/10 hover:bg-folk-yellow/30 focus:outline-none ${tab === 2 ? 'bg-folk-yellow text-gray-900' : 'text-gray-900 dark:text-folk-yellow'}`}
+            className={`px-8 py-3 rounded-full font-bold text-lg shadow-lg transition-all duration-300 border-2 border-folk-yellow/60 bg-folk-yellow/10 hover:bg-folk-yellow/30 focus:outline-none ${tab === 2 ? 'bg-folk-yellow text-gray-900' : 'text-gray-900
             onClick={() => setTab(2)}
           >Reklamy</button>
         </div>
@@ -71,7 +71,7 @@ const AboutPage: React.FC = () => {
                     />
                   </div>
                   <h2 className="text-3xl font-bold text-white mb-2">Jacek Kowalski</h2>
-                  <div className="text-xl font-semibold text-amber-400 dark:text-folk-yellow mb-2">Szef Kuchni</div>
+                  <div className="text-xl font-semibold text-amber-400 mb-2">Szef Kuchni</div>
                 </div>
               </div>
               <div className="mt-8 text-2xl text-folk-red font-bold">Idealne na każdą okazję</div>
@@ -106,3 +106,4 @@ const AboutPage: React.FC = () => {
 };
 
 export default AboutPage;
+

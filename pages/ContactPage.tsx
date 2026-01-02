@@ -16,24 +16,16 @@ const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w
 
 
 const ContactCard: React.FC<{ icon: React.ReactElement, title: string, children: React.ReactNode }> = ({ icon, title, children }) => {
-    const { theme } = useAppContext();
-    const cardBg = {
-        light: 'bg-secondary-light',
-        dark: 'bg-secondary-dark/50',
-        wood: 'bg-secondary-dark/50',
-        flower: 'bg-secondary-dark/50',
-    }[theme];
-
     return (
-        <div className={`relative overflow-hidden ${cardBg} p-6 rounded-lg border border-slate-200 dark:border-folk-blue/20 backdrop-blur-sm flex items-center space-x-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-folk-blue/20 dark:hover:shadow-folk-blue/30 hover:-translate-y-1 hover:ring-2 hover:ring-folk-blue/50`}>
-            <FlowerArtCorner className="absolute top-0 left-0 w-16 h-16 text-folk-red opacity-10 dark:opacity-20 pointer-events-none" />
-            <FlowerArtCorner className="absolute top-0 right-0 w-16 h-16 text-folk-red opacity-10 dark:opacity-20 pointer-events-none transform rotate-90" />
-            <FlowerArtCorner className="absolute bottom-0 left-0 w-16 h-16 text-folk-red opacity-10 dark:opacity-20 pointer-events-none transform -rotate-90" />
-            <FlowerArtCorner className="absolute bottom-0 right-0 w-16 h-16 text-folk-red opacity-10 dark:opacity-20 pointer-events-none transform rotate-180" />
+        <div className="relative overflow-hidden bg-secondary-light p-4 sm:p-6 rounded-lg border border-slate-200 backdrop-blur-sm flex items-center space-x-3 sm:space-x-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-folk-blue/20 hover:-translate-y-1 hover:ring-2 hover:ring-folk-blue/50">
+            <FlowerArtCorner className="absolute top-0 left-0 w-16 h-16 text-folk-red opacity-10 pointer-events-none" />
+            <FlowerArtCorner className="absolute top-0 right-0 w-16 h-16 text-folk-red opacity-10 pointer-events-none transform rotate-90" />
+            <FlowerArtCorner className="absolute bottom-0 left-0 w-16 h-16 text-folk-red opacity-10 pointer-events-none transform -rotate-90" />
+            <FlowerArtCorner className="absolute bottom-0 right-0 w-16 h-16 text-folk-red opacity-10 pointer-events-none transform rotate-180" />
             <div className="relative flex-shrink-0">{icon}</div>
             <div className="relative">
-                <h3 className="text-xl font-bold text-text-dark dark:text-text-light">{title}</h3>
-                <div className="text-text-dark-secondary dark:text-text-light-secondary">{children}</div>
+                <h3 className="text-xl font-bold text-text-dark">{title}</h3>
+                <div className="text-text-dark-secondary">{children}</div>
             </div>
         </div>
     );
@@ -41,29 +33,22 @@ const ContactCard: React.FC<{ icon: React.ReactElement, title: string, children:
 
 
 export const ContactPage: React.FC<PageProps> = ({ id }) => {
-    const { t, theme } = useAppContext();
+    const { t } = useAppContext();
     const address = "Fahrenheitstraat 22, 2561 EC Den Haag";
 
-    const pageBg = {
-        light: 'bg-primary-light',
-        dark: 'bg-primary-dark',
-        wood: 'bg-primary-dark',
-        flower: 'bg-primary-dark',
-    }[theme];
-
     return (
-        <div id={id} className={`py-24 ${pageBg} text-text-dark dark:text-text-light`}>
+        <div id={id} className="py-12 sm:py-16 md:py-24 bg-primary-light text-text-dark">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <AnimatedSection className="text-center mb-16">
+                <AnimatedSection className="text-center mb-8 sm:mb-12 md:mb-16">
                     <div className="flex justify-center items-center gap-4">
                         <FolkArtFlourish className="text-folk-red/50 hidden md:block" />
-                        <h1 className="text-5xl md:text-7xl font-bold text-folk-red font-serif">{t('contact_title')}</h1>
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-folk-red font-serif">{t('contact_title')}</h1>
                         <FolkArtFlourish className="text-folk-red/50 transform scale-x-[-1] hidden md:block" />
                     </div>
-                    <p className="mt-4 text-xl text-text-dark-secondary dark:text-text-light-secondary max-w-3xl mx-auto">{t('contact_subtitle')}</p>
+                    <p className="mt-4 text-xl text-text-dark-secondary max-w-3xl mx-auto">{t('contact_subtitle')}</p>
                 </AnimatedSection>
                 
-                <div className="grid lg:grid-cols-2 gap-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                     {/* Contact Details & Hours */}
                     <div className="space-y-8">
                         <AnimatedSection>
@@ -72,16 +57,16 @@ export const ContactPage: React.FC<PageProps> = ({ id }) => {
                                     <p>{address}</p>
                                 </ContactCard>
                                 <ContactCard icon={<PhoneIcon/>} title={t('phone')}>
-                                    <a href={`tel:${RESTAURANT_PHONE}`} className="hover:text-folk-red transition-colors">{RESTAURANT_PHONE}</a>
+                                    <a href={'tel:' + RESTAURANT_PHONE} className="hover:text-folk-red transition-colors">{RESTAURANT_PHONE}</a>
                                 </ContactCard>
                                 <ContactCard icon={<WhatsAppIcon/>} title={t('whatsapp')}>
-                                    <a href={`https://wa.me/${RESTAURANT_PHONE_INTL}`} target="_blank" rel="noopener noreferrer" className="hover:text-folk-red transition-colors">{t('whatsapp_click_to_chat')}</a>
+                                    <a href={'https://wa.me/' + RESTAURANT_PHONE_INTL} target="_blank" rel="noopener noreferrer" className="hover:text-folk-red transition-colors">{t('whatsapp_click_to_chat')}</a>
                                 </ContactCard>
                             </div>
                         </AnimatedSection>
                         <AnimatedSection delay="duration-700">
                              <ContactCard icon={<ClockIcon/>} title={t('opening_hours')}>
-                                <div className="text-lg space-y-3 pt-3 border-t border-slate-200 dark:border-folk-blue/10 w-full">
+                                <div className="text-sm sm:text-base md:text-lg space-y-2 sm:space-y-3 pt-2 sm:pt-3 border-t border-slate-200 w-full">
                                     <div className="flex justify-between items-center">
                                         <span>{t('monday_sunday')}</span>
                                     </div>
@@ -106,7 +91,7 @@ export const ContactPage: React.FC<PageProps> = ({ id }) => {
                             <FlowerArtCorner className="absolute bottom-0 left-0 w-24 h-24 text-folk-red opacity-20 pointer-events-none transform -rotate-90 z-10" />
                             <FlowerArtCorner className="absolute bottom-0 right-0 w-24 h-24 text-folk-red opacity-20 pointer-events-none transform rotate-180 z-10" />
                            <iframe
-                                src={`https://maps.google.com/maps?q=${encodeURIComponent(address)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                                src={'https://maps.google.com/maps?q=' + encodeURIComponent(address) + '&t=&z=15&ie=UTF8&iwloc=&output=embed'}
                                 width="100%"
                                 height="100%"
                                 className="border-0"
@@ -123,15 +108,15 @@ export const ContactPage: React.FC<PageProps> = ({ id }) => {
                 {/* CTA Buttons */}
                 <AnimatedSection className="mt-16">
                     <div className="max-w-2xl mx-auto grid sm:grid-cols-2 gap-6">
-                         <a href={`tel:${RESTAURANT_PHONE}`} className="text-center bg-folk-green text-white font-bold py-4 px-6 rounded-lg text-xl hover:bg-folk-green/80 transform hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-folk-green/40">
+                         <a href={'tel:' + RESTAURANT_PHONE} className="text-center bg-folk-green text-white font-bold py-4 px-6 rounded-lg text-xl hover:bg-folk-green/80 transform hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-folk-green/40">
                             {t('call_now')}
                         </a>
-                        <a href={`https://wa.me/${RESTAURANT_PHONE_INTL}`} target="_blank" rel="noopener noreferrer" className="text-center bg-teal-500 text-white font-bold py-4 px-6 rounded-lg text-xl hover:bg-teal-400 transform hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-teal-400/40">
+                        <a href={'https://wa.me/' + RESTAURANT_PHONE_INTL} target="_blank" rel="noopener noreferrer" className="text-center bg-teal-500 text-white font-bold py-4 px-6 rounded-lg text-xl hover:bg-teal-400 transform hover:scale-105 transition-all duration-300 hover:shadow-lg hover:shadow-teal-400/40">
                              {t('whatsapp')}
                         </a>
                     </div>
                     <div 
-                        className="text-center mt-12 p-8 rounded-lg shadow-lg border border-slate-200 dark:border-folk-red/20 relative overflow-hidden bg-cover bg-center bg-no-repeat"
+                        className="text-center mt-12 p-8 rounded-lg shadow-lg border border-slate-200 relative overflow-hidden bg-cover bg-center bg-no-repeat"
                         style={{backgroundImage: "url('/images/TŁO FACEBOOK .jpg')"}}
                     >
                         {/* Dark overlay for better text readability */}

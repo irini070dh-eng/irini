@@ -14,17 +14,8 @@ interface PageProps {
 }
 
 const AppContent: React.FC = () => {
-    const { theme } = useAppContext();
-    
-    const themeBgClass = {
-      light: 'bg-primary-light',
-      dark: 'bg-primary-dark',
-      wood: 'bg-primary-dark',
-      flower: 'bg-primary-dark',
-    }[theme];
-
     return (
-        <div className={`${themeBgClass} overflow-x-hidden text-text-dark dark:text-text-light transition-colors duration-500`}>
+        <div className="bg-primary-light overflow-x-hidden text-text-dark transition-colors duration-500">
             <Header />
             <main>
                 <HomePage id="home" />

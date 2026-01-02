@@ -44,7 +44,7 @@ export const ThemeToggle: React.FC = () => {
     return (
         <button
             onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all duration-300 hover:ring-2 hover:ring-folk-yellow/60"
+            className="p-2 rounded-full hover:bg-black/10 transition-all duration-300 hover:ring-2 hover:ring-folk-yellow/60"
             aria-label="Toggle theme"
         >
             {iconToShow}

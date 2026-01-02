@@ -32,24 +32,24 @@ const IngredientsModal: React.FC<{ item: MenuItem; onClose: () => void }> = ({ i
             onClick={onClose}
         >
             <div 
-                className="relative bg-secondary-light dark:bg-secondary-dark w-full max-w-lg rounded-lg shadow-2xl border-2 border-folk-blue/30 overflow-hidden flex flex-col"
+                className="relative bg-secondary-light w-full max-w-lg rounded-lg shadow-2xl border-2 border-folk-blue/30 overflow-hidden flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="p-6 md:p-8 text-center border-b border-slate-200 dark:border-folk-blue/20">
+                <div className="p-6 md:p-8 text-center border-b border-slate-200">
                     <h2 className="text-2xl font-bold font-serif text-folk-red">{t(item.name)}</h2>
-                    <p className="text-sm text-text-dark-secondary dark:text-text-light-secondary">{t('allergens_and_ingredients')}</p>
+                    <p className="text-sm text-text-dark-secondary">{t('allergens_and_ingredients')}</p>
                 </div>
                 <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 overflow-y-auto max-h-[60vh]">
                     <div>
-                        <h3 className="text-lg font-semibold text-text-dark dark:text-text-light mb-2 border-b border-slate-300 dark:border-folk-blue/20 pb-1">{t('ingredients')}</h3>
-                        <ul className="space-y-1 text-sm text-text-dark-secondary dark:text-text-light-secondary list-disc list-inside">
+                        <h3 className="text-lg font-semibold text-text-dark mb-2 border-b border-slate-300 pb-1">{t('ingredients')}</h3>
+                        <ul className="space-y-1 text-sm text-text-dark-secondary list-disc list-inside">
                             {item.ingredientKeys?.map((key, index) => (
                                 <li key={index}>{t(key)}</li>
                             ))}
                         </ul>
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-text-dark dark:text-text-light mb-2 border-b border-slate-300 dark:border-folk-blue/20 pb-1">{t('allergens')}</h3>
+                        <h3 className="text-lg font-semibold text-text-dark mb-2 border-b border-slate-300 pb-1">{t('allergens')}</h3>
                         {(item.allergenKeys && item.allergenKeys.length > 0) ? (
                             <ul className="space-y-1 text-sm text-folk-red font-semibold list-disc list-inside">
                                 {item.allergenKeys.map((key, index) => (
@@ -57,11 +57,11 @@ const IngredientsModal: React.FC<{ item: MenuItem; onClose: () => void }> = ({ i
                                 ))}
                             </ul>
                         ) : (
-                            <p className="text-sm text-text-dark-secondary dark:text-text-light-secondary italic">{t('no_allergens_listed')}</p>
+                            <p className="text-sm text-text-dark-secondary italic">{t('no_allergens_listed')}</p>
                         )}
                     </div>
                 </div>
-                <div className="mt-auto p-4 bg-slate-100 dark:bg-black/20 text-center border-t border-slate-200 dark:border-folk-blue/20">
+                <div className="mt-auto p-4 bg-slate-100 text-center border-t border-slate-200">
                      <button
                         onClick={onClose}
                         className="bg-folk-red text-white font-bold py-2.5 px-8 rounded-lg hover:bg-folk-pink transform active:scale-95 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-folk-red/40"
@@ -110,7 +110,7 @@ const LightboxModal: React.FC<{ item: MenuItem; onClose: () => void }> = ({ item
             onClick={onClose}
         >
             <div 
-                className="relative bg-secondary-light dark:bg-secondary-dark w-full max-w-4xl max-h-[90vh] rounded-lg shadow-2xl overflow-hidden flex flex-col md:flex-row border-2 border-folk-red/30"
+                className="relative bg-secondary-light w-full max-w-4xl max-h-[90vh] rounded-lg shadow-2xl overflow-hidden flex flex-col md:flex-row border-2 border-folk-red/30"
                 onClick={e => e.stopPropagation()}
             >
                 <FlowerArtCorner className="absolute top-0 left-0 w-24 h-24 text-folk-red opacity-20 pointer-events-none" />
@@ -129,12 +129,12 @@ const LightboxModal: React.FC<{ item: MenuItem; onClose: () => void }> = ({ item
                 
                 <div className="w-full md:w-1/2 h-64 md:h-auto flex-shrink-0 relative group">
                     <img 
-                        src={`/images/${item.imageIds[currentImageIndex]}`} 
-                        alt={t(item.name)} 
+                        src="/images/logo.linku.jpeg" 
+                        alt={t(item.name)}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                            console.error(`Failed to load image: /images/${item.imageIds[currentImageIndex]}`);
-                            e.currentTarget.src = 'https://via.placeholder.com/600x800?text=Image+Not+Found';
+                            console.error('Failed to load logo image');
+                            e.currentTarget.src = '/images/logo.linku.jpeg';
                         }}
                     />
                     {item.imageIds.length > 1 && (
@@ -172,12 +172,12 @@ const LightboxModal: React.FC<{ item: MenuItem; onClose: () => void }> = ({ item
                 <div className="w-full md:w-1/2 p-6 md:p-8 overflow-y-auto flex flex-col">
                     <div className="flex-grow">
                         <h2 className="text-3xl lg:text-4xl font-bold font-serif text-folk-red">{t(item.name)}</h2>
-                        <p className="mt-4 text-text-dark-secondary dark:text-text-light-secondary leading-relaxed">{t(item.description)}</p>
+                        <p className="mt-4 text-text-dark-secondary leading-relaxed">{t(item.description)}</p>
                     </div>
-                     <div className="mt-8 pt-6 border-t border-slate-300 dark:border-folk-blue/20">
+                     <div className="mt-8 pt-6 border-t border-slate-300">
                         <button
                             onClick={() => setIsIngredientsModalOpen(true)}
-                            className="w-full bg-transparent border-2 border-slate-300 dark:border-folk-blue/50 text-text-dark-secondary dark:text-text-light-secondary font-semibold py-2.5 px-6 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/10 transition-colors hover:ring-2 hover:ring-folk-blue/50"
+                            className="w-full bg-transparent border-2 border-slate-300 text-text-dark-secondary font-semibold py-2.5 px-6 rounded-lg hover:bg-slate-200/50 transition-colors hover:ring-2 hover:ring-folk-blue/50"
                         >
                             {t('allergens_and_ingredients')}
                         </button>
@@ -199,40 +199,19 @@ const categoryIcons: { [key: string]: React.FC<{ className?: string }> } = {
 };
 
 export const MenuPage: React.FC<PageProps> = ({ id }) => {
-    const { t, theme } = useAppContext();
+    const { t } = useAppContext();
     const [activeTab, setActiveTab] = useState(MENU_DATA[0].category);
     const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
 
     const activeCategoryItems = MENU_DATA.find(cat => cat.category === activeTab)?.items || [];
 
-    const pageBg = {
-        light: 'bg-primary-light',
-        dark: 'bg-primary-dark',
-        wood: 'bg-primary-dark',
-        flower: 'bg-primary-dark',
-    }[theme];
-
-    const menuListBg = {
-        light: 'bg-secondary-light/80',
-        dark: 'bg-secondary-dark/50',
-        wood: 'bg-secondary-dark/50',
-        flower: 'bg-secondary-dark/50',
-    }[theme];
-
-    const ctaBg = {
-        light: 'bg-secondary-light',
-        dark: 'bg-secondary-dark',
-        wood: 'bg-secondary-dark',
-        flower: 'bg-secondary-dark',
-    }[theme];
-
     return (
         <>
         <div 
             id={id}
-            className={`py-24 ${pageBg} text-text-dark dark:text-text-light relative`} 
+            className="py-24 bg-primary-light text-text-dark relative" 
             style={{
-                backgroundImage: "url('/images/TŁO MENU.png')",
+                backgroundImage: "url('/images/logo.linku.jpeg')",
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'repeat',
@@ -240,7 +219,7 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
             }}
         >
             {/* Overlay for better text readability */}
-            <div className="absolute inset-0 bg-black/40 dark:bg-black/60"></div>
+            <div className="absolute inset-0 bg-black/40"></div>
             
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <AnimatedSection className="text-center mb-16">
@@ -249,7 +228,7 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
                         <h1 className="text-5xl md:text-7xl font-bold text-folk-red font-serif tracking-wider drop-shadow-lg [text-shadow:_2px_2px_4px_rgb(0_0_0_/_80%)]">{t('menu_title')}</h1>
                         <FolkArtFlourish className="text-folk-red/50 transform scale-x-[-1] hidden md:block" />
                     </div>
-                    <p className="mt-4 text-xl text-text-dark dark:text-white font-medium max-w-2xl mx-auto drop-shadow-lg">{t('menu_subtitle')}</p>
+                    <p className="mt-4 text-xl text-text-dark font-medium max-w-2xl mx-auto drop-shadow-lg">{t('menu_subtitle')}</p>
                 </AnimatedSection>
 
                 {/* Tabs */}
@@ -265,7 +244,7 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
                                     className={`flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 border-2 ${
                                         isActive 
                                         ? 'bg-folk-red border-folk-red text-white shadow-lg shadow-folk-red/30' 
-                                        : 'bg-transparent border-slate-300 dark:border-folk-blue/30 text-text-dark-secondary dark:text-text-light-secondary hover:bg-folk-red/5 dark:hover:bg-folk-red/10 hover:border-folk-red/50 hover:text-folk-red'
+                                        : 'bg-transparent border-slate-300 text-text-dark-secondary hover:bg-folk-red/5 hover:border-folk-red/50 hover:text-folk-red'
                                     }`}
                                 >
                                     {Icon && <Icon className="w-5 h-5" />}
@@ -277,7 +256,7 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
                 </AnimatedSection>
                 
                 <AnimatedSection delay="duration-1000">
-                    <div className={`p-4 sm:p-6 md:p-8 rounded-lg shadow-inner ${menuListBg} backdrop-blur-md`}>
+                    <div className="p-4 sm:p-6 md:p-8 rounded-lg shadow-inner bg-secondary-light/80 backdrop-blur-md">
                         <div className="space-y-6 max-w-4xl mx-auto">
                             {activeCategoryItems.map((item) => {
                                 const isHighlighted = item.name === 'piers_kurczaka_schabowy';
@@ -290,12 +269,12 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
                                         <div className="flex-shrink-0 w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden border-2 border-folk-red/20 group-hover:border-folk-red/60 transition-colors duration-300">
                                             <img
                                                 loading="lazy"
-                                                src={`/images/${item.imageIds[0]}`}
+                                                src="/images/logo.linku.jpeg"
                                                 alt={t(item.name)}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                                 onError={(e) => {
-                                                    console.error(`Failed to load thumbnail: /images/${item.imageIds[0]}`);
-                                                    e.currentTarget.src = 'https://via.placeholder.com/200x200?text=No+Image';
+                                                    console.error('Failed to load logo image');
+                                                    e.currentTarget.src = '/images/logo.linku.jpeg';
                                                 }}
                                             />
                                         </div>
@@ -319,7 +298,7 @@ export const MenuPage: React.FC<PageProps> = ({ id }) => {
 
                 <AnimatedSection className="mt-20">
                     <div 
-                        className="relative overflow-hidden text-center p-8 rounded-lg shadow-lg border border-slate-200 dark:border-folk-red/20 backdrop-blur-md"
+                        className="relative overflow-hidden text-center p-8 rounded-lg shadow-lg border border-slate-200 backdrop-blur-md"
                         style={{
                             backgroundImage: "url('/images/TŁO FACEBOOK .jpg')",
                             backgroundSize: 'cover',

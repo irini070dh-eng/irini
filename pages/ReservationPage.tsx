@@ -16,19 +16,19 @@ interface FormErrors {
 const FaqItem: React.FC<{ q: string, a: string }> = ({ q, a }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
-        <div className="border-b border-slate-300 dark:border-folk-blue/20">
+        <div className="border-b border-slate-300">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex justify-between items-center py-4 px-2 text-left rounded-md transition-all duration-300 hover:bg-slate-100/50 dark:hover:bg-white/5 hover:ring-1 hover:ring-folk-blue/30"
+                className="w-full flex justify-between items-center py-4 px-2 text-left rounded-md transition-all duration-300 hover:bg-slate-100/50 hover:ring-1 hover:ring-folk-blue/30"
             >
-                <span className="text-lg font-semibold text-text-dark dark:text-text-light">{q}</span>
+                <span className="text-lg font-semibold text-text-dark">{q}</span>
                 <svg className={`w-6 h-6 text-folk-red transform transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
             <div className={`grid transition-all duration-500 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
                 <div className="overflow-hidden">
-                    <p className="pt-0 pb-4 text-text-dark-secondary dark:text-text-light-secondary">{a}</p>
+                    <p className="pt-0 pb-4 text-text-dark-secondary">{a}</p>
                 </div>
             </div>
         </div>
@@ -103,26 +103,26 @@ const ClassicReservationForm: React.FC = () => {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="relative space-y-6 p-8 bg-white dark:bg-secondary-dark/50 rounded-lg border-2 border-folk-red/30 dark:border-folk-red/40 shadow-2xl overflow-hidden backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="relative space-y-6 p-4 sm:p-6 md:p-8 bg-white rounded-lg border-2 border-folk-red/30 shadow-2xl overflow-hidden backdrop-blur-sm">
             {/* Folkowe dekoracje w rogach */}
-            <FlowerArtCorner className="absolute top-0 left-0 w-24 h-24 text-folk-red/20 dark:text-folk-red/30 pointer-events-none" />
-            <FlowerArtCorner className="absolute top-0 right-0 w-24 h-24 text-folk-blue/20 dark:text-folk-blue/30 pointer-events-none transform rotate-90" />
-            <FlowerArtCorner className="absolute bottom-0 left-0 w-24 h-24 text-folk-yellow/20 dark:text-folk-yellow/30 pointer-events-none transform -rotate-90" />
-            <FlowerArtCorner className="absolute bottom-0 right-0 w-24 h-24 text-folk-pink/20 dark:text-folk-pink/30 pointer-events-none transform rotate-180" />
+            <FlowerArtCorner className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 text-folk-red/20 pointer-events-none" />
+            <FlowerArtCorner className="absolute top-0 right-0 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 text-folk-blue/20 pointer-events-none transform rotate-90" />
+            <FlowerArtCorner className="absolute bottom-0 left-0 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 text-folk-yellow/20 pointer-events-none transform -rotate-90" />
+            <FlowerArtCorner className="absolute bottom-0 right-0 w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 text-folk-pink/20 pointer-events-none transform rotate-180" />
             
             {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-folk-red/5 via-transparent to-folk-blue/5 pointer-events-none"></div>
             
             <div className="relative z-10">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                    <FolkArtFlourish className="text-folk-red/60 w-8 h-8" />
-                    <h2 className="text-3xl font-bold text-folk-red font-serif">{t('reservation_form_title')}</h2>
-                    <FolkArtFlourish className="text-folk-red/60 w-8 h-8 transform scale-x-[-1]" />
+                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-6">
+                    <FolkArtFlourish className="text-folk-red/60 w-6 h-6 sm:w-8 sm:h-8" />
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-folk-red font-serif">{t('reservation_form_title')}</h2>
+                    <FolkArtFlourish className="text-folk-red/60 w-6 h-6 sm:w-8 sm:h-8 transform scale-x-[-1]" />
                 </div>
             
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="reservation-date" className="block text-sm font-medium text-text-dark dark:text-text-light mb-2">
+                    <label htmlFor="reservation-date" className="block text-sm font-medium text-text-dark mb-2">
                         {t('date')} *
                     </label>
                     <input
@@ -131,7 +131,7 @@ const ClassicReservationForm: React.FC = () => {
                         value={formData.date}
                         onChange={(e) => handleInputChange('date', e.target.value)}
                         aria-label={t('date')}
-                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-red/50 transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-red/50 transition-all duration-300 bg-white ${
                             errors.date ? 'border-red-500 focus:ring-red-500' : 'border-folk-red/30 focus:border-folk-red hover:border-folk-red/50'
                         }`}
                     />
@@ -139,7 +139,7 @@ const ClassicReservationForm: React.FC = () => {
                 </div>
 
                 <div>
-                    <label htmlFor="reservation-time" className="block text-sm font-medium text-text-dark dark:text-text-light mb-2">
+                    <label htmlFor="reservation-time" className="block text-sm font-medium text-text-dark mb-2">
                         {t('time')}
                     </label>
                     <select
@@ -147,7 +147,7 @@ const ClassicReservationForm: React.FC = () => {
                         value={formData.time}
                         onChange={(e) => handleInputChange('time', e.target.value)}
                         aria-label={t('time')}
-                        className="w-full px-4 py-3 border-2 border-folk-blue/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-blue/50 focus:border-folk-blue hover:border-folk-blue/50 transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        className="w-full px-4 py-3 border-2 border-folk-blue/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-blue/50 focus:border-folk-blue hover:border-folk-blue/50 transition-all duration-300 bg-white"
                     >
                         {Array.from({ length: 13 }, (_, i) => {
                             const hour = 12 + i;
@@ -162,9 +162,9 @@ const ClassicReservationForm: React.FC = () => {
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="reservation-people" className="block text-sm font-medium text-text-dark dark:text-text-light mb-2">
+                    <label htmlFor="reservation-people" className="block text-sm font-medium text-text-dark mb-2">
                         {t('number_of_people')}
                     </label>
                     <select
@@ -172,7 +172,7 @@ const ClassicReservationForm: React.FC = () => {
                         value={formData.people}
                         onChange={(e) => handleInputChange('people', parseInt(e.target.value))}
                         aria-label={t('number_of_people')}
-                        className="w-full px-4 py-3 border-2 border-folk-yellow/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-yellow/50 focus:border-folk-yellow hover:border-folk-yellow/50 transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                        className="w-full px-4 py-3 border-2 border-folk-yellow/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-yellow/50 focus:border-folk-yellow hover:border-folk-yellow/50 transition-all duration-300 bg-white"
                     >
                         {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
                             <option key={num} value={num}>
@@ -183,7 +183,7 @@ const ClassicReservationForm: React.FC = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-text-dark dark:text-text-light mb-2">
+                    <label className="block text-sm font-medium text-text-dark mb-2">
                         {t('form_phone')} *
                     </label>
                     <input
@@ -191,7 +191,7 @@ const ClassicReservationForm: React.FC = () => {
                         value={formData.phone}
                         onChange={(e) => handleInputChange('phone', e.target.value)}
                         placeholder={t('phone_placeholder')}
-                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-green/50 transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white ${
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-green/50 transition-all duration-300 bg-white ${
                             errors.phone ? 'border-red-500 focus:ring-red-500' : 'border-folk-green/30 focus:border-folk-green hover:border-folk-green/50'
                         }`}
                     />
@@ -200,7 +200,7 @@ const ClassicReservationForm: React.FC = () => {
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-text-dark dark:text-text-light mb-2">
+                <label className="block text-sm font-medium text-text-dark mb-2">
                     {t('name')}
                 </label>
                 <input
@@ -208,12 +208,12 @@ const ClassicReservationForm: React.FC = () => {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder={t('name_placeholder')}
-                    className="w-full px-4 py-3 border-2 border-folk-pink/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-pink/50 focus:border-folk-pink hover:border-folk-pink/50 transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                    className="w-full px-4 py-3 border-2 border-folk-pink/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-pink/50 focus:border-folk-pink hover:border-folk-pink/50 transition-all duration-300 bg-white"
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-text-dark dark:text-text-light mb-2">
+                <label className="block text-sm font-medium text-text-dark mb-2">
                     {t('special_requests')}
                 </label>
                 <textarea
@@ -221,14 +221,14 @@ const ClassicReservationForm: React.FC = () => {
                     onChange={(e) => handleInputChange('special', e.target.value)}
                     placeholder={t('special_requests_placeholder')}
                     rows={3}
-                    className="w-full px-4 py-3 border-2 border-folk-blue/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-blue/50 focus:border-folk-blue hover:border-folk-blue/50 transition-all duration-300 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                    className="w-full px-4 py-3 border-2 border-folk-blue/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-folk-blue/50 focus:border-folk-blue hover:border-folk-blue/50 transition-all duration-300 bg-white"
                 />
             </div>
 
             <button
                 type="submit"
                 disabled={isSubmitting}
-                className="relative w-full bg-gradient-to-r from-folk-green to-folk-green/80 text-white font-bold py-4 px-6 rounded-lg text-lg hover:from-folk-green/90 hover:to-folk-green/70 transition-all duration-300 active:scale-95 hover:shadow-2xl hover:shadow-folk-green/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-1 overflow-hidden group"
+                className="relative w-full bg-gradient-to-r from-folk-green to-folk-green/80 text-white font-bold py-3 px-4 sm:py-4 sm:px-6 rounded-lg text-base sm:text-lg hover:from-folk-green/90 hover:to-folk-green/70 transition-all duration-300 active:scale-95 hover:shadow-2xl hover:shadow-folk-green/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-1 overflow-hidden group"
             >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
@@ -248,19 +248,19 @@ export const ReservationPage: React.FC<PageProps> = ({ id }) => {
 
     return (
         <div id={id} className="min-h-screen">
-            <div className="container mx-auto px-4 py-16">
-                <AnimatedSection className="text-center mb-16">
-                    <div className="flex justify-center items-center gap-4 mb-6">
-                        <FolkArtFlourish className="w-12 h-12 text-folk-red" />
-                        <h1 className="text-5xl font-bold text-folk-red font-serif">{t('reservation_title')}</h1>
-                        <FolkArtFlourish className="w-12 h-12 text-folk-red transform scale-x-[-1]" />
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-16">
+                <AnimatedSection className="text-center mb-8 sm:mb-12 md:mb-16">
+                    <div className="flex justify-center items-center gap-2 sm:gap-4 mb-6">
+                        <FolkArtFlourish className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-folk-red" />
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-folk-red font-serif">{t('reservation_title')}</h1>
+                        <FolkArtFlourish className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-folk-red transform scale-x-[-1]" />
                     </div>
-                    <p className="text-xl text-text-dark-secondary dark:text-text-light-secondary max-w-2xl mx-auto">
+                    <p className="text-xl text-text-dark-secondary max-w-2xl mx-auto">
                         {t('reservation_subtitle')}
                     </p>
                 </AnimatedSection>
 
-                <div className="grid lg:grid-cols-5 gap-12">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-12">
                     {/* Form */}
                     <div className="lg:col-span-3">
                         <ClassicReservationForm />
@@ -269,8 +269,8 @@ export const ReservationPage: React.FC<PageProps> = ({ id }) => {
                     {/* Info & FAQ */}
                     <div className="lg:col-span-2 space-y-8">
                         <div>
-                            <p className="text-center p-4 bg-blue-100 dark:bg-folk-blue/20 text-blue-900 dark:text-folk-blue border border-blue-200 dark:border-folk-blue/50 rounded-lg font-semibold">{t('reservation_confirmation_info')}</p>
-                            <p className="mt-4 text-center p-4 bg-yellow-100 dark:bg-folk-yellow/20 text-yellow-900 dark:text-folk-yellow border border-yellow-200 dark:border-folk-yellow/50 rounded-lg font-semibold">{t('reservation_large_group_info')}</p>
+                            <p className="text-center p-4 bg-blue-100 text-blue-900 border border-blue-200 rounded-lg font-semibold">{t('reservation_confirmation_info')}</p>
+                            <p className="mt-4 text-center p-4 bg-yellow-100 text-yellow-900 border border-yellow-200 rounded-lg font-semibold">{t('reservation_large_group_info')}</p>
                         </div>
                         <div>
                             <h3 className="text-2xl font-bold text-folk-red mb-4">{t('faq_title')}</h3>

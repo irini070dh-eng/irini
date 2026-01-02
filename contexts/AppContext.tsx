@@ -21,7 +21,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         return Language.NL;
     });
 
-    const [theme, setTheme] = useState<'light' | 'dark' | 'wood' | 'flower'>('light');
+    const theme = 'light'; // Stały jasny motyw
 
     // Save language to localStorage whenever it changes
     useEffect(() => {
@@ -35,7 +35,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }, []);
 
     const toggleTheme = useCallback(() => {
-        setTheme(prev => prev === 'light' ? 'dark' : 'light');
+        // Funkcja wyłączona - motyw zawsze jasny
     }, []);
 
     const t = useCallback((key: string): string => {

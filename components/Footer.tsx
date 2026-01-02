@@ -39,7 +39,7 @@ const InstagramButton: React.FC = () => {
 }
 
 export const Footer: React.FC = () => {
-    const { t, theme } = useAppContext();
+    const { t } = useAppContext();
     const quickLinks = [
         { href: '#home', label: t('nav_home'), icon: '🏠' },
         { href: '#menu', label: t('nav_menu'), icon: '🍽️' },
@@ -48,15 +48,8 @@ export const Footer: React.FC = () => {
         { href: '#contact', label: t('nav_contact'), icon: '📞' },
     ];
 
-    const footerBg = {
-        light: 'bg-gradient-to-b from-slate-50 to-slate-100',
-        dark: 'bg-gradient-to-b from-secondary-dark to-black',
-        wood: 'bg-gradient-to-b from-secondary-dark to-black',
-        flower: 'bg-gradient-to-b from-secondary-dark to-black',
-    }[theme];
-
     return (
-        <footer className={`${footerBg} text-text-dark-secondary dark:text-text-light-secondary relative overflow-hidden`}>
+        <footer className="bg-gradient-to-b from-slate-50 to-slate-100 text-text-dark-secondary relative overflow-hidden">
             {/* Decorative Wave */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-folk-red via-folk-pink to-folk-red"></div>
             
@@ -71,7 +64,7 @@ export const Footer: React.FC = () => {
                             Leniwa Baba
                         </a>
                         <p className="mt-3 text-folk-red font-bold text-lg">{t('slogan')}</p>
-                        <p className="mt-3 text-sm text-text-dark-secondary dark:text-text-light-secondary leading-relaxed max-w-xs">
+                        <p className="mt-3 text-sm text-text-dark-secondary leading-relaxed max-w-xs">
                             Autentyczna polska kuchnia w sercu Hagi. Tradycyjne smaki, domowa atmosfera.
                         </p>
                         
@@ -84,7 +77,7 @@ export const Footer: React.FC = () => {
 
                     {/* Quick Links */}
                     <div>
-                        <h3 className="text-lg font-semibold text-text-dark dark:text-text-light mb-6 uppercase tracking-wider">
+                        <h3 className="text-lg font-semibold text-text-dark mb-6 uppercase tracking-wider">
                             {t('quick_links')}
                         </h3>
                         <ul className="space-y-3">
@@ -104,14 +97,14 @@ export const Footer: React.FC = () => {
 
                     {/* Contact Info */}
                     <div>
-                        <h3 className="text-lg font-semibold text-text-dark dark:text-text-light mb-6 uppercase tracking-wider">
+                        <h3 className="text-lg font-semibold text-text-dark mb-6 uppercase tracking-wider">
                             Kontakt
                         </h3>
                         <ul className="space-y-4 text-sm">
                             <li className="flex items-start justify-center md:justify-start gap-3">
                                 <span className="text-xl">📍</span>
                                 <div>
-                                    <div className="font-semibold text-text-dark dark:text-text-light">Adres</div>
+                                    <div className="font-semibold text-text-dark">Adres</div>
                                     <div>Gedempte Gracht 42</div>
                                     <div>2512 CA Den Haag</div>
                                 </div>
@@ -119,7 +112,7 @@ export const Footer: React.FC = () => {
                             <li className="flex items-start justify-center md:justify-start gap-3">
                                 <span className="text-xl">📞</span>
                                 <div>
-                                    <div className="font-semibold text-text-dark dark:text-text-light">Telefon</div>
+                                    <div className="font-semibold text-text-dark">Telefon</div>
                                     <a href="tel:+31704272052" className="hover:text-folk-red transition-colors">
                                         +31 70 427 2052
                                     </a>
@@ -128,7 +121,7 @@ export const Footer: React.FC = () => {
                             <li className="flex items-start justify-center md:justify-start gap-3">
                                 <span className="text-xl">✉️</span>
                                 <div>
-                                    <div className="font-semibold text-text-dark dark:text-text-light">Email</div>
+                                    <div className="font-semibold text-text-dark">Email</div>
                                     <a href="mailto:info@leniwababa.nl" className="hover:text-folk-red transition-colors">
                                         info@leniwababa.nl
                                     </a>
@@ -137,7 +130,7 @@ export const Footer: React.FC = () => {
                             <li className="flex items-start justify-center md:justify-start gap-3">
                                 <span className="text-xl">🕐</span>
                                 <div>
-                                    <div className="font-semibold text-text-dark dark:text-text-light">Godziny otwarcia</div>
+                                    <div className="font-semibold text-text-dark">Godziny otwarcia</div>
                                     <div>Wt-Nd: 12:00 - 22:00</div>
                                     <div className="text-folk-red font-semibold">Poniedziałek nieczynne</div>
                                 </div>
@@ -147,7 +140,7 @@ export const Footer: React.FC = () => {
 
                     {/* Additional Info */}
                     <div className="md:col-span-2 lg:col-span-1">
-                        <h3 className="text-lg font-semibold text-text-dark dark:text-text-light mb-6 uppercase tracking-wider">
+                        <h3 className="text-lg font-semibold text-text-dark mb-6 uppercase tracking-wider">
                             Informacje
                         </h3>
                         <ul className="space-y-3 text-sm">
@@ -171,9 +164,9 @@ export const Footer: React.FC = () => {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="border-t border-slate-300 dark:border-folk-blue/30 pt-8 text-center">
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        © {new Date().getFullYear()} <span className="font-bold text-text-dark dark:text-text-light">Leniwa Baba</span>. Wszystkie prawa zastrzeżone.
+                <div className="border-t border-slate-300 pt-8 text-center">
+                    <p className="text-sm text-slate-500">
+                        © {new Date().getFullYear()} <span className="font-bold text-text-dark">Leniwa Baba</span>. Wszystkie prawa zastrzeżone.
                     </p>
                     <div className="flex items-center justify-center gap-2 mt-4 text-sm">
                         <span>Made with</span>
@@ -185,3 +178,4 @@ export const Footer: React.FC = () => {
         </footer>
     );
 }
+

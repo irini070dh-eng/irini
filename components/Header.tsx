@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeToggle } from './ThemeToggle';
 
 export const Header: React.FC = () => {
-  const { t, theme } = useAppContext();
+  const { t } = useAppContext();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -35,17 +34,10 @@ export const Header: React.FC = () => {
   };
 
 
-  const linkClasses = "px-4 py-2 rounded-md transition-all duration-300 hover:text-folk-red hover:bg-black/10 dark:hover:bg-white/10 hover:ring-2 hover:ring-folk-red/30";
+  const linkClasses = "px-4 py-2 rounded-md transition-all duration-300 hover:text-folk-red hover:bg-black/10 hover:ring-2 hover:ring-folk-red/30";
 
-  const headerBg = {
-    light: 'bg-primary-light/80',
-    dark: 'bg-primary-dark/80',
-  }[theme];
-
-  const mobileMenuBg = {
-    light: 'bg-primary-light/90',
-    dark: 'bg-primary-dark/90',
-  }[theme];
+  const headerBg = 'bg-primary-light/80';
+  const mobileMenuBg = 'bg-primary-light/90';
 
   return (
     <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? `${headerBg} backdrop-blur-lg shadow-lg` : 'bg-transparent'}`}>
@@ -64,7 +56,6 @@ export const Header: React.FC = () => {
 
           <div className="hidden lg:flex items-center space-x-4">
             <LanguageSwitcher />
-            <ThemeToggle />
           </div>
 
           {/* Mobile Menu Button */}
@@ -93,7 +84,6 @@ export const Header: React.FC = () => {
             ))}
              <div className="flex items-center space-x-4 pt-4">
                 <LanguageSwitcher direction="up" />
-                <ThemeToggle />
             </div>
             </nav>
         </div>
