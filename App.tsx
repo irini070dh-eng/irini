@@ -85,14 +85,13 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen selection:bg-blue-200 selection:text-blue-700 bg-gradient-to-b from-white to-blue-50 flex flex-col relative overflow-hidden">
+    <div className="min-h-screen selection:bg-blue-200 selection:text-blue-700 bg-linear-to-b from-white to-blue-50 flex flex-col relative overflow-hidden">
       {/* Animated Floating Background Shapes - Apple Style */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {/* Shape 1 - Blue */}
         <div 
-          className="absolute w-[800px] h-[800px] rounded-full opacity-30 blur-[80px]"
+          className="absolute w-200 h-200 rounded-full opacity-30 blur-[80px] bg-[radial-gradient(circle,#0066cc_0%,#4da6ff_50%,transparent_70%)]"
           style={{
-            background: 'radial-gradient(circle, #0066cc 0%, #4da6ff 50%, transparent 70%)',
             animation: 'float-1 25s ease-in-out infinite',
             top: '-10%',
             left: '-10%'
@@ -100,9 +99,8 @@ const App: React.FC = () => {
         />
         {/* Shape 2 - Light Blue */}
         <div 
-          className="absolute w-[700px] h-[700px] rounded-full opacity-35 blur-[70px]"
+          className="absolute w-175 h-175 rounded-full opacity-35 blur-[70px] bg-[radial-gradient(circle,#4da6ff_0%,#0066cc_50%,transparent_70%)]"
           style={{
-            background: 'radial-gradient(circle, #4da6ff 0%, #0066cc 50%, transparent 70%)',
             animation: 'float-2 30s ease-in-out infinite',
             top: '30%',
             right: '-10%'
@@ -110,9 +108,8 @@ const App: React.FC = () => {
         />
         {/* Shape 3 - White/Blue Mix */}
         <div 
-          className="absolute w-[900px] h-[900px] rounded-full opacity-25 blur-[90px]"
+          className="absolute w-225 h-225 rounded-full opacity-25 blur-[90px] bg-[radial-gradient(circle,#ffffff_0%,#4da6ff_40%,#0066cc_60%,transparent_70%)]"
           style={{
-            background: 'radial-gradient(circle, #ffffff 0%, #4da6ff 40%, #0066cc 60%, transparent 70%)',
             animation: 'float-3 28s ease-in-out infinite',
             bottom: '-15%',
             left: '15%'
@@ -131,7 +128,7 @@ const App: React.FC = () => {
         {activeView === 'home' && (
           <div className="animate-reveal">
             <Hero onOrderClick={() => handleViewChange('menu')} onAboutClick={() => handleViewChange('about')} />
-            <section id="about-preview" className="py-40 px-4 relative overflow-hidden bg-gradient-to-b from-blue-50 to-white">
+            <section id="about-preview" className="py-40 px-4 relative overflow-hidden bg-linear-to-b from-blue-50 to-white">
                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-32 items-center">
                  <div className="relative group">
                     <div className="relative z-10 overflow-hidden rounded-[3.5rem] border border-blue-200">

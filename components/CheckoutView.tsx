@@ -3,6 +3,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { LanguageContext, CartContext, CheckoutContext, MenuContext } from '../index';
 import { TRANSLATIONS } from '../constants';
 import { DEN_HAAG_POSTAL_CODES, DELIVERY_CONFIG, PaymentMethod, DeliveryType, CustomerInfo } from '../types';
+import StripePayment from './StripePayment';
 
 interface CheckoutViewProps {
   onOrderComplete: (orderId: string) => void;
@@ -131,50 +132,24 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderComplete, onBack }) 
     }
   };
 
-  const handlePayment = async () => {
+  // Handle cash payment (no Stripe)
+  const handleCashPayment = async () => {
     setIsProcessing(true);
     setPaymentError(null);
     setStep('processing');
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // For cash payment, we skip actual payment processing
-      if (paymentMethod === 'cash') {
-        const orderId = await checkoutCtx.createOrder({
-          customer,
-          items: cartCtx.cart,
-          subtotal,
-          deliveryFee,
-          total,
-          deliveryType,
-          paymentMethod,
-          isPaid: false // Cash = not paid yet
-        });
-        onOrderComplete(orderId);
-        return;
-      }
-
-      // Simulate successful payment for iDEAL/card
-      const success = Math.random() > 0.1; // 90% success rate for demo
-      
-      if (success) {
-        const orderId = await checkoutCtx.createOrder({
-          customer,
-          items: cartCtx.cart,
-          subtotal,
-          deliveryFee,
-          total,
-          deliveryType,
-          paymentMethod,
-          isPaid: true
-        });
-        onOrderComplete(orderId);
-      } else {
-        setPaymentError(t.paymentFailed);
-        setStep('payment');
-      }
+      const orderId = await checkoutCtx.createOrder({
+        customer,
+        items: cartCtx.cart,
+        subtotal,
+        deliveryFee,
+        total,
+        deliveryType,
+        paymentMethod: 'cash',
+        isPaid: false
+      });
+      onOrderComplete(orderId);
     } catch (error) {
       setPaymentError(t.paymentFailed);
       setStep('payment');
@@ -183,12 +158,47 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderComplete, onBack }) 
     }
   };
 
+  // Handle Stripe payment success
+  const handleStripePaymentSuccess = async (paymentIntentId: string) => {
+    try {
+      const orderId = await checkoutCtx.createOrder({
+        customer,
+        items: cartCtx.cart,
+        subtotal,
+        deliveryFee,
+        total,
+        deliveryType,
+        paymentMethod,
+        isPaid: true,
+        transactionId: paymentIntentId
+      });
+      onOrderComplete(orderId);
+    } catch (error) {
+      setPaymentError(t.paymentFailed);
+      setStep('payment');
+    }
+  };
+
+  // Handle Stripe payment error
+  const handleStripePaymentError = (error: string) => {
+    setPaymentError(error);
+    setStep('payment');
+  };
+
+  // Handle processing state change
+  const handleProcessingChange = (processing: boolean) => {
+    setIsProcessing(processing);
+    if (processing) {
+      setStep('processing');
+    }
+  };
+
   const estimatedTime = deliveryType === 'delivery' 
     ? DELIVERY_CONFIG.estimatedDeliveryMinutes 
     : DELIVERY_CONFIG.estimatedPickupMinutes;
 
   return (
-    <section className="min-h-screen py-24 px-4 bg-gradient-to-b from-blue-50 to-white">
+    <section className="min-h-screen py-24 px-4 bg-linear-to-b from-blue-50 to-white">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-12">
@@ -401,20 +411,23 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderComplete, onBack }) 
                     </div>
                   )}
 
-                  <div className="space-y-3">
+                  {/* Payment Method Selection */}
+                  <div className="space-y-3 mb-6">
                     {/* iDEAL */}
                     <button
                       onClick={() => setPaymentMethod('ideal')}
                       className={`w-full p-5 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'ideal' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
                     >
-                      <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-pink-200">
                         <span className="text-2xl font-bold text-pink-500">iD</span>
                       </div>
                       <div className="text-left flex-1">
                         <div className="font-bold text-gray-800">{t.idealPayment}</div>
-                        <div className="text-sm text-gray-600">{language === 'pl' ? 'Popularne w Holandii' : 'Populair in Nederland'}</div>
+                        <div className="text-sm text-gray-600">{language === 'pl' ? 'Najpopularniejsza w Holandii' : 'Meest populair in Nederland'}</div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 ${paymentMethod === 'ideal' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`} />
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'ideal' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
+                        {paymentMethod === 'ideal' && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                      </div>
                     </button>
 
                     {/* Card */}
@@ -427,9 +440,28 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderComplete, onBack }) 
                       </div>
                       <div className="text-left flex-1">
                         <div className="font-bold text-gray-800">{t.cardPayment}</div>
-                        <div className="text-sm text-gray-600">Visa, Mastercard, Amex</div>
+                        <div className="text-sm text-gray-600">Visa, Mastercard, Amex, Maestro</div>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 ${paymentMethod === 'card' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`} />
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
+                        {paymentMethod === 'card' && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                      </div>
+                    </button>
+
+                    {/* Bancontact */}
+                    <button
+                      onClick={() => setPaymentMethod('bancontact')}
+                      className={`w-full p-5 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'bancontact' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
+                    >
+                      <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center border border-yellow-200">
+                        <span className="text-xl">🇧🇪</span>
+                      </div>
+                      <div className="text-left flex-1">
+                        <div className="font-bold text-gray-800">Bancontact</div>
+                        <div className="text-sm text-gray-600">{language === 'pl' ? 'Popularna w Belgii' : 'Populair in België'}</div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'bancontact' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
+                        {paymentMethod === 'bancontact' && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                      </div>
                     </button>
 
                     {/* Cash (only for delivery) */}
@@ -438,20 +470,36 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderComplete, onBack }) 
                         onClick={() => setPaymentMethod('cash')}
                         className={`w-full p-5 rounded-2xl border-2 flex items-center gap-4 transition-all ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
                       >
-                        <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center border border-green-200">
                           <span className="text-xl">💵</span>
                         </div>
                         <div className="text-left flex-1">
                           <div className="font-bold text-gray-800">{t.cashPayment}</div>
                           <div className="text-sm text-gray-600">{language === 'pl' ? 'Płatność przy dostawie' : 'Betalen bij bezorging'}</div>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`} />
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-500' : 'border-gray-400'}`}>
+                          {paymentMethod === 'cash' && <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>}
+                        </div>
                       </button>
                     )}
                   </div>
+
+                  {/* Stripe Payment Form for non-cash methods */}
+                  {paymentMethod !== 'cash' && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <StripePayment
+                        paymentMethod={paymentMethod}
+                        customer={customer}
+                        total={total}
+                        onPaymentSuccess={handleStripePaymentSuccess}
+                        onPaymentError={handleStripePaymentError}
+                        onProcessingChange={handleProcessingChange}
+                      />
+                    </div>
+                  )}
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons - only show back button and cash payment */}
                 <div className="flex gap-4">
                   <button
                     onClick={() => setStep('details')}
@@ -459,16 +507,15 @@ const CheckoutView: React.FC<CheckoutViewProps> = ({ onOrderComplete, onBack }) 
                   >
                     {language === 'pl' ? 'Wstecz' : 'Terug'}
                   </button>
-                  <button
-                    onClick={handlePayment}
-                    disabled={isProcessing}
-                    className="flex-[2] py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50"
-                  >
-                    {paymentMethod === 'cash' 
-                      ? (language === 'pl' ? 'Potwierdź zamówienie' : 'Bestelling bevestigen')
-                      : t.payNow
-                    } - €{total.toFixed(2)}
-                  </button>
+                  {paymentMethod === 'cash' && (
+                    <button
+                      onClick={handleCashPayment}
+                      disabled={isProcessing}
+                      className="flex-[2] py-5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-2xl font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50"
+                    >
+                      {language === 'pl' ? 'Potwierdź zamówienie' : 'Bestelling bevestigen'} - €{total.toFixed(2)}
+                    </button>
+                  )}
                 </div>
               </div>
             )}

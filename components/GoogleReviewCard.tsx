@@ -52,27 +52,17 @@ const GoogleReviewCard: React.FC<GoogleReviewCardProps> = ({
     >
       {/* Dynamic Animated Aura - Constant slow breathing + mouse reactive */}
       <div 
-        className={`absolute -inset-10 bg-gradient-to-br from-blue-400/20 via-transparent to-blue-400/20 rounded-[5rem] blur-[80px] transition-all duration-1000 ease-out pointer-events-none ${isHovered ? 'opacity-80' : 'opacity-40'}`}
-        style={{
-          transform: `translate(${mousePos.x * 40}px, ${mousePos.y * 40}px) scale(${isHovered ? 1.1 : 1})`,
-          animation: 'pulse-slow 8s ease-in-out infinite'
-        }}
+        className={`absolute -inset-10 bg-linear-to-br from-blue-400/20 via-transparent to-blue-400/20 rounded-[5rem] blur-[80px] transition-all duration-1000 ease-out pointer-events-none ${isHovered ? 'opacity-80' : 'opacity-40'}`}
       ></div>
 
       {/* Parallax Secondary Glow */}
       <div 
         className="absolute -inset-2 bg-blue-400/10 rounded-[4rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-        style={{
-          transform: `translate(${mousePos.x * -20}px, ${mousePos.y * -20}px)`,
-        }}
       ></div>
       
       {/* Main Card Container with 3D Tilt */}
       <div 
         className="relative glass border border-blue-200 rounded-[3.5rem] p-10 md:p-16 overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,102,204,0.2)] preserve-3d transition-transform duration-500 ease-out"
-        style={{
-          transform: `rotateX(${mousePos.y * -8}deg) rotateY(${mousePos.x * 8}deg)`,
-        }}
       >
         {/* Subtle Moving Grain Overlay */}
         <div className="absolute inset-0 opacity-[0.015] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] animate-grain"></div>
@@ -80,11 +70,6 @@ const GoogleReviewCard: React.FC<GoogleReviewCardProps> = ({
         {/* Decorative Grid Pattern - Reacts inverted to mouse for depth */}
         <div 
           className="absolute inset-0 opacity-[0.12] pointer-events-none transition-transform duration-700 ease-out" 
-          style={{ 
-            backgroundImage: 'radial-gradient(circle, #0066cc 1px, transparent 1px)', 
-            backgroundSize: '40px 40px',
-            transform: `translate(${mousePos.x * 15}px, ${mousePos.y * 15}px) translateZ(-20px)`,
-          }}
         ></div>
 
         {/* Top Section: Google Logo & Live Status */}
@@ -121,7 +106,7 @@ const GoogleReviewCard: React.FC<GoogleReviewCardProps> = ({
         {/* Center Section: Big Numbers */}
         <div className="flex flex-col items-center justify-center text-center space-y-10 relative z-10 translate-z-40">
           <div className="relative">
-             <div className="text-9xl md:text-[11rem] font-serif font-bold bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 bg-clip-text text-transparent leading-none tracking-tighter drop-shadow-2xl">
+             <div className="text-9xl md:text-[11rem] font-serif font-bold bg-linear-to-br from-amber-400 via-amber-500 to-amber-600 bg-clip-text text-transparent leading-none tracking-tighter drop-shadow-2xl">
                {displayRating}
              </div>
              <div className="absolute -top-4 -right-12 glass border border-blue-300 rounded-full px-5 py-2 text-[11px] font-bold text-gray-700 uppercase tracking-widest shadow-lg">
@@ -156,11 +141,11 @@ const GoogleReviewCard: React.FC<GoogleReviewCardProps> = ({
         <div className="mt-20 flex flex-col items-center gap-10 relative z-10 translate-z-30">
           <button 
             onClick={onWriteReview}
-            className="group/btn relative px-14 py-6 overflow-hidden rounded-[2rem] transition-all duration-500 hover:scale-[1.05] hover:-translate-y-2 active:scale-95 shadow-2xl shadow-blue-400/20 hover:shadow-blue-400/40"
+            className="group/btn relative px-14 py-6 overflow-hidden rounded-4xl transition-all duration-500 hover:scale-[1.05] hover:-translate-y-2 active:scale-95 shadow-2xl shadow-blue-400/20 hover:shadow-blue-400/40"
           >
             {/* Button Background State */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 border border-blue-500 transition-all duration-500"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 opacity-0 group-hover/btn:opacity-100 transition-all duration-500"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-blue-600 to-blue-700 border border-blue-500 transition-all duration-500"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-blue-600 opacity-0 group-hover/btn:opacity-100 transition-all duration-500"></div>
             
             <div className="relative flex items-center gap-4">
               <span className="text-white font-bold uppercase tracking-[0.4em] text-[11px] transition-colors duration-500">
@@ -179,10 +164,7 @@ const GoogleReviewCard: React.FC<GoogleReviewCardProps> = ({
 
         {/* Floating Background Text - Parallax Level 1 (Slowest/Deepest Text) */}
         <div 
-          className="absolute -bottom-16 -left-16 text-[16rem] font-serif font-bold text-gray-800/[0.03] select-none pointer-events-none italic transition-transform duration-1000 ease-out"
-          style={{
-            transform: `translate(${mousePos.x * -25}px, ${mousePos.y * -25}px) rotate(-5deg)`,
-          }}
+          className="absolute -bottom-16 -left-16 text-[16rem] font-serif font-bold text-gray-800/3 select-none pointer-events-none italic transition-transform duration-1000 ease-out"
         >
           Irini
         </div>

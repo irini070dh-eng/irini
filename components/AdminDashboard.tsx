@@ -928,7 +928,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
   // Show loading while checking auth
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-white/60">Sprawdzanie autoryzacji...</p>
@@ -943,12 +943,12 @@ Weimarstraat 174, 2562 HD Den Haag`;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col lg:flex-row pt-24 overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-white flex flex-col lg:flex-row pt-24 overflow-hidden">
       {/* Sidebar Navigation */}
       <aside className="w-full lg:w-80 border-r border-blue-200 bg-white/90 backdrop-blur-3xl p-8 flex flex-col gap-12 relative z-20">
         <div className="space-y-2">
           <div className="flex items-center gap-3 mb-10">
-             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center font-serif font-bold text-white text-xl shadow-lg">I</div>
+             <div className="w-10 h-10 bg-linear-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center font-serif font-bold text-white text-xl shadow-lg">I</div>
              <div className="leading-tight">
                 <h2 className="text-lg font-serif font-bold text-gray-800">{t.staffConsole}</h2>
                 <p className="text-[9px] uppercase tracking-[0.3em] text-gray-600 font-bold">{t.greekIriniPremium}</p>
@@ -981,7 +981,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                 activeTab === item.id ? 'text-white' : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 transition-transform duration-500 ease-out ${activeTab === item.id ? 'translate-x-0' : '-translate-x-full'}`} />
+              <div className={`absolute inset-0 bg-linear-to-r from-blue-600 to-blue-700 transition-transform duration-500 ease-out ${activeTab === item.id ? 'translate-x-0' : '-translate-x-full'}`} />
               <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
               </svg>
@@ -1136,7 +1136,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                            {selectedOrder.status === 'pending' && (
                              <button
                                onClick={() => updateOrderStatus(selectedOrder.id, 'preparing')}
-                               className="col-span-2 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                               className="col-span-2 py-4 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                              >
                                <span>🍳</span>
                                Start Preparing
@@ -1152,7 +1152,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                                      setEstimatedDeliveryMinutes(30);
                                      setShowDeliveryModal(true);
                                    }}
-                                   className="col-span-2 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                                   className="col-span-2 py-4 bg-linear-to-r from-purple-500 to-purple-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                                  >
                                    <span>🚗</span>
                                    Out for Delivery
@@ -1160,7 +1160,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                                ) : (
                                  <button
                                    onClick={() => updateOrderStatus(selectedOrder.id, 'ready')}
-                                   className="col-span-2 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                                   className="col-span-2 py-4 bg-linear-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                                  >
                                    <span>✓</span>
                                    Ready for Pickup
@@ -1172,7 +1172,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                            {(selectedOrder.status === 'ready' || selectedOrder.status === 'delivery') && (
                              <button
                                onClick={() => updateOrderStatus(selectedOrder.id, 'completed')}
-                               className="col-span-2 py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                               className="col-span-2 py-4 bg-linear-to-r from-emerald-600 to-emerald-700 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                              >
                                <span>✓</span>
                                Mark as Completed
@@ -1250,7 +1250,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                                }
                              }}
                              disabled={!newStaffNote.trim() || !staffName.trim()}
-                             className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                             className="px-6 py-2 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                            >
                              Add Note
                            </button>
@@ -1414,9 +1414,9 @@ Weimarstraat 174, 2562 HD Den Haag`;
 
             {/* Peak Hours Insight Card */}
             {stats.peakOrders > 0 && (
-              <div className="glass p-8 rounded-[3rem] border border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+              <div className="glass p-8 rounded-[3rem] border border-amber-300 bg-linear-to-r from-amber-50 to-orange-50">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                  <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
                     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
@@ -1517,7 +1517,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                                <span className="text-amber-500">€{revNum.toFixed(2)} ({percentage.toFixed(0)}%)</span>
                             </div>
                             <div className="h-1.5 w-full bg-blue-100 rounded-full overflow-hidden">
-                               <div className="h-full bg-gradient-to-r from-blue-600 to-blue-700 transition-all duration-1000" style={{ width: Math.round(percentage) + '%' }} />
+                               <div className="h-full bg-linear-to-r from-blue-600 to-blue-700 transition-all duration-1000" style={{ width: Math.round(percentage) + '%' }} />
                             </div>
                          </div>
                        );
@@ -1786,7 +1786,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                             setReservationAdminNotes('');
                             setSelectedReservation(null);
                           }}
-                          className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-linear-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1822,7 +1822,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                             setAlternativeTime('');
                             setSelectedReservation(null);
                           }}
-                          className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-linear-to-r from-red-500 to-red-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2003,7 +2003,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                   setEditingMenuItem(newItem);
                   setIsAddingNewItem(true);
                 }}
-                className="px-8 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl text-[11px] font-bold uppercase tracking-[0.3em] shadow-lg hover:scale-[1.02] transition-all flex items-center gap-3"
+                className="px-8 py-5 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-2xl text-[11px] font-bold uppercase tracking-[0.3em] shadow-lg hover:scale-[1.02] transition-all flex items-center gap-3"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -2178,6 +2178,8 @@ Weimarstraat 174, 2562 HD Den Haag`;
                         <button
                           onClick={() => setEditingContent(item)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          aria-label="Edit content"
+                          title="Edit content"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -2997,7 +2999,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                       setIsAddingNewItem(false);
                     }
                   }}
-                  className="flex-[2] py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-[0_8px_30px_-8px_rgba(0,102,204,0.6)] hover:scale-[1.02] transition-all"
+                  className="flex-2 py-4 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase text-[11px] tracking-widest shadow-[0_8px_30px_-8px_rgba(0,102,204,0.6)] hover:scale-[1.02] transition-all"
                 >
                   {isAddingNewItem ? '➕ Add Dish' : '💾 Save Changes'}
                 </button>
@@ -3050,7 +3052,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
 
              <button 
                onClick={() => window.print()}
-               className="w-full py-6 rounded-3xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
+               className="w-full py-6 rounded-3xl bg-linear-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-[0.3em] text-[10px] shadow-2xl transition-transform hover:scale-[1.02] active:scale-95"
              >
                 Download Audit Report (PDF)
              </button>
@@ -3098,6 +3100,9 @@ Weimarstraat 174, 2562 HD Den Haag`;
                   max="120"
                   value={estimatedDeliveryMinutes}
                   onChange={(e) => setEstimatedDeliveryMinutes(parseInt(e.target.value) || 30)}
+                  aria-label="Estimated delivery minutes"
+                  placeholder="30"
+                  title="Estimated delivery minutes"
                   className="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-600 rounded-xl text-white text-center font-bold text-lg focus:border-purple-500 focus:outline-none"
                 />
                 <span className="text-zinc-400 font-bold">minutes</span>
@@ -3125,7 +3130,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                   setShowDeliveryModal(false);
                   setDeliveryOrderId(null);
                 }}
-                className="flex-1 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                className="flex-1 py-4 bg-linear-to-r from-purple-500 to-purple-600 text-white rounded-2xl font-bold uppercase text-xs tracking-widest shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
               >
                 <span>🚗</span> Start Delivery
               </button>
@@ -3182,7 +3187,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
             </div>
             <div className="flex gap-4">
               <button disabled={isPrinting} onClick={() => setPrintingOrder(null)} className="flex-1 py-5 glass border border-zinc-800 rounded-2xl text-zinc-500 font-bold uppercase text-[10px]">Cancel</button>
-              <button disabled={isPrinting} onClick={() => performActualPrint(printingOrder)} className="flex-[2] py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Confirm & Execute Print</button>
+              <button disabled={isPrinting} onClick={() => performActualPrint(printingOrder)} className="flex-2 py-5 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-lg">Confirm & Execute Print</button>
             </div>
           </div>
         </div>
@@ -3222,7 +3227,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
                     setDeleteConfirmId(null);
                   }
                 }}
-                className="flex-1 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-[0_8px_30px_-8px_rgba(220,38,38,0.6)] hover:scale-[1.02] transition-all"
+                className="flex-1 py-4 bg-linear-to-r from-red-600 to-red-700 text-white rounded-2xl font-bold uppercase text-[10px] tracking-widest shadow-[0_8px_30px_-8px_rgba(220,38,38,0.6)] hover:scale-[1.02] transition-all"
               >
                 🗑️ Delete
               </button>
@@ -3236,7 +3241,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
         <div className="fixed bottom-8 right-8 z-[200] animate-reveal">
           <div className="glass border border-blue-400 rounded-2xl p-6 shadow-2xl max-w-md">
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <div className="flex-shrink-0 w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
@@ -3272,6 +3277,8 @@ Weimarstraat 174, 2562 HD Den Haag`;
               <button
                 onClick={() => setEditingContent(null)}
                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close"
+                title="Close"
               >
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -3447,7 +3454,7 @@ Weimarstraat 174, 2562 HD Den Haag`;
               <button
                 onClick={() => handleSaveContent(editingContent)}
                 disabled={savingContent}
-                className="px-5 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 text-sm sm:text-base"
+                className="px-5 sm:px-8 py-2.5 sm:py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:shadow-lg transition-all disabled:opacity-50 text-sm sm:text-base"
               >
                 {savingContent ? '...' : (language === 'pl' ? '💾 Zapisz' : '💾 Opslaan')}
               </button>

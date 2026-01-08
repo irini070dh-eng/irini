@@ -27,7 +27,7 @@ const ContactView: React.FC = () => {
   const whatsappUrl = `https://wa.me/31${whatsappNumber}?text=${defaultMsg}`;
 
   return (
-    <div className="pt-32 pb-24 px-4 bg-gradient-to-b from-white to-blue-50 animate-in fade-in duration-700">
+    <div className="pt-32 pb-24 px-4 bg-linear-to-b from-white to-blue-50 animate-in fade-in duration-700">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-7xl font-serif font-bold mb-4 text-gray-800">{t.contactTitle}</h1>
@@ -104,10 +104,10 @@ const ContactView: React.FC = () => {
                 </div>
               )}
               
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-blue-400/20 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full py-5 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs hover:scale-102 active:scale-95 transition-all shadow-xl shadow-blue-400/20 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isSubmitting 
                   ? (language === 'pl' ? 'Wysyłanie...' : 'Verzenden...') 
@@ -143,7 +143,7 @@ const ContactView: React.FC = () => {
                     </div>
                     <a 
                       href={`tel:${restaurantPhone}`} 
-                      className="inline-flex items-center gap-4 px-10 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-[0.3em] text-[10px] rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50"
+                      className="inline-flex items-center gap-4 px-10 py-5 bg-linear-to-r from-blue-600 to-blue-700 text-white font-bold uppercase tracking-widest text-xs rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-blue-500/30 hover:shadow-blue-500/50"
                     >
                       {language === 'pl' ? 'ZADZWOŃ TERAZ' : 'BEL NU'}
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,9 +157,9 @@ const ContactView: React.FC = () => {
 
             {/* Premium WhatsApp Card */}
             <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-emerald-500/0 rounded-[3rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="absolute -inset-1 bg-linear-to-r from-emerald-500/20 to-emerald-500/0 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               
-              <div className="relative glass p-10 rounded-[3rem] border border-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-500 overflow-hidden shadow-2xl">
+              <div className="relative glass p-10 rounded-3xl border border-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-500 overflow-hidden shadow-2xl">
                 {/* Decorative Pattern */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:bg-emerald-500/15 transition-colors" />
                 

@@ -109,7 +109,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
                   </div>
                   <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-blue-600 to-blue-700 transition-all duration-500"
+                      className="h-full bg-linear-to-r from-blue-600 to-blue-700 transition-all duration-500"
                       style={{ width: `${Math.min(100, (total / DELIVERY_CONFIG.freeDeliveryFrom) * 100)}%` }}
                     />
                   </div>
@@ -130,10 +130,10 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, onCheckout }) 
               <button 
                 onClick={handleCheckout}
                 disabled={isBelowMinimum}
-                className={`w-full py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-sm transition-all shadow-xl ${
+                className={`w-full py-5 rounded-2xl font-bold uppercase tracking-widest text-sm transition-all shadow-xl ${
                   isBelowMinimum 
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:scale-[1.02] active:scale-95 shadow-blue-400/20'
+                    : 'bg-linear-to-r from-blue-600 to-blue-700 text-white hover:scale-102 active:scale-95 shadow-blue-400/20'
                 }`}
               >
                 {t.checkout}

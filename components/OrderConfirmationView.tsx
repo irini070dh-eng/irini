@@ -47,7 +47,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
 
   if (!order) {
     return (
-      <section className="min-h-screen py-24 px-4 bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
+      <section className="min-h-screen py-24 px-4 bg-linear-to-b from-blue-50 to-white flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">{language === 'pl' ? 'Ładowanie zamówienia...' : 'Bestelling laden...'}</p>
@@ -67,7 +67,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
   });
 
   return (
-    <section className="min-h-screen py-24 px-4 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
+    <section className="min-h-screen py-24 px-4 bg-linear-to-b from-blue-50 to-white relative overflow-hidden">
       {/* Status Changed Notification */}
       {statusChanged && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-reveal">
@@ -401,7 +401,7 @@ const OrderConfirmationView: React.FC<OrderConfirmationProps> = ({ orderId, onBa
           </button>
           <button
             onClick={onTrackOrder}
-            className="flex-1 py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+            className="flex-1 py-5 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-2xl font-bold uppercase tracking-widest hover:scale-102 active:scale-95 transition-all shadow-xl"
           >
             {t.trackOrder}
           </button>

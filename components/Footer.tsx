@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
   const { settings } = settingsCtx;
 
   return (
-    <footer id="contact" className="pt-24 pb-12 bg-gradient-to-b from-blue-50 to-white border-t border-blue-200 overflow-hidden relative">
+    <footer id="contact" className="pt-24 pb-12 bg-linear-to-b from-blue-50 to-white border-t border-blue-200 overflow-hidden relative">
       {/* Abstract Design Elements */}
       <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-blue-300/10 rounded-full blur-3xl" />

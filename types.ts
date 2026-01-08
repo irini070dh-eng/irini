@@ -7,9 +7,18 @@ export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivery' | 'comp
 
 export type PaymentStatus = 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded';
 
-export type PaymentMethod = 'ideal' | 'card' | 'bancontact' | 'cash';
+export type PaymentMethod = 'ideal' | 'card' | 'bancontact' | 'sofort' | 'cash';
 
 export type DeliveryType = 'delivery' | 'pickup';
+
+// Stripe Payment Intent types
+export interface StripePaymentIntent {
+  id: string;
+  clientSecret: string;
+  status: 'requires_payment_method' | 'requires_confirmation' | 'requires_action' | 'processing' | 'succeeded' | 'canceled';
+  amount: number;
+  currency: string;
+}
 
 export interface CustomerInfo {
   name: string;

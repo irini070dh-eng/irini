@@ -8,6 +8,17 @@
   # Build command
   command = "npm run build"
 
+  # Functions directory
+  functions = "netlify/functions"
+
+[dev]
+  # Port for the dev server
+  port = 8888
+  # Target port for framework (Vite)
+  targetPort = 3000
+  # Automatically launch browser
+  autoLaunch = false
+
 [build.environment]
   # Node.js version
   NODE_VERSION = "20"

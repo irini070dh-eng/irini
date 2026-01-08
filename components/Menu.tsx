@@ -60,7 +60,7 @@ const Menu: React.FC = () => {
   };
 
   return (
-    <section id="menu" ref={scrollRef} className="py-24 px-4 bg-gradient-to-b from-blue-50 to-white relative min-h-screen">
+    <section id="menu" ref={scrollRef} className="py-24 px-4 bg-linear-to-b from-blue-50 to-white relative min-h-screen">
       {/* Background radial gradient for depth */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_0%,_rgba(0,102,204,0.1)_0%,_transparent_70%)] pointer-events-none" />
       
@@ -97,7 +97,7 @@ const Menu: React.FC = () => {
                 }`}
               >
                 {/* Active Background Slide */}
-                <div className={`absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 transition-transform duration-500 ease-out ${activeCategory === cat ? 'translate-y-0' : 'translate-y-full'}`} />
+                <div className={`absolute inset-0 bg-linear-to-r from-blue-600 to-blue-700 transition-transform duration-500 ease-out ${activeCategory === cat ? 'translate-y-0' : 'translate-y-full'}`} />
                 
                 {/* Hover Glow */}
                 <div className="absolute inset-0 bg-white/5 opacity-0 group-hover/cat:opacity-100 transition-opacity" />
@@ -132,12 +132,12 @@ const Menu: React.FC = () => {
                   />
                   
                   {/* Overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-90" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent opacity-90" />
                   
                   {/* Price floating badge */}
                   <div className="absolute top-8 right-8 z-20">
-                    <div className="glass border border-amber-400/30 backdrop-blur-xl px-7 py-4 rounded-2xl shadow-[0_8px_30px_-8px_rgba(251,191,36,0.5)]">
-                      <span className="text-2xl font-serif font-bold bg-gradient-to-br from-amber-400 to-amber-500 bg-clip-text text-transparent">€{item.price.toFixed(2)}</span>
+                    <div className="glass border border-amber-400/30 backdrop-blur-xl px-7 py-4 rounded-2xl shadow-xl">
+                      <span className="text-2xl font-serif font-bold bg-linear-to-br from-amber-400 to-amber-500 bg-clip-text text-transparent">€{item.price.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -155,7 +155,7 @@ const Menu: React.FC = () => {
                         e.stopPropagation();
                         cartCtx.addToCart(item.id);
                       }}
-                      className="w-full py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-[1.5rem] text-[11px] font-bold uppercase tracking-[0.3em] transition-all active:scale-95 flex items-center justify-center gap-3 shadow-[0_8px_30px_-8px_rgba(0,102,204,0.6)] translate-y-8 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 duration-400 delay-100 hover:shadow-[0_12px_40px_-8px_rgba(0,102,204,0.8)]"
+                      className="w-full py-5 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-3xl text-xs font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl translate-y-8 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 duration-400 delay-100 hover:shadow-2xl"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />

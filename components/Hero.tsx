@@ -23,14 +23,14 @@ const Hero: React.FC<HeroProps> = ({ onOrderClick, onAboutClick }) => {
           alt="Authentic Greek Food"
           className="w-full h-full object-cover opacity-70 scale-105 transition-transform duration-[20s] ease-out group-hover:scale-100"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-r from-black/40 via-transparent to-black/40" />
       </div>
 
       {/* Content */}
       <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
         <div className="mb-8 inline-flex items-center gap-3 px-6 py-3 rounded-full border border-blue-400/40 glass backdrop-blur-xl shadow-[0_0_30px_-5px_rgba(0,102,204,0.4)]">
-          <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 animate-pulse shadow-[0_0_10px_rgba(0,102,204,0.6)]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-linear-to-r from-blue-500 to-blue-600 animate-pulse shadow-[0_0_10px_rgba(0,102,204,0.6)]" />
           <span className="text-[11px] uppercase tracking-[0.3em] font-bold text-blue-400">Authentic Greek Kitchen</span>
         </div>
         
@@ -49,9 +49,9 @@ const Hero: React.FC<HeroProps> = ({ onOrderClick, onAboutClick }) => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <button 
             onClick={onOrderClick}
-            className="group relative px-14 py-6 bg-gradient-to-r from-blue-600 to-blue-700 overflow-hidden rounded-full transition-all duration-300 hover:scale-[1.08] active:scale-95 shadow-[0_8px_40px_-10px_rgba(0,102,204,0.6)] hover:shadow-[0_12px_50px_-10px_rgba(0,102,204,0.8)]"
+            className="group relative px-14 py-6 bg-linear-to-r from-blue-600 to-blue-700 overflow-hidden rounded-full transition-all duration-300 hover:scale-[1.08] active:scale-95 shadow-[0_8px_40px_-10px_rgba(0,102,204,0.6)] hover:shadow-[0_12px_50px_-10px_rgba(0,102,204,0.8)]"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
             <span className="relative text-white font-bold uppercase tracking-[0.3em] text-[11px]">{t.orderNow}</span>
           </button>
           
@@ -67,7 +67,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderClick, onAboutClick }) => {
       {/* Scroll Indicator */}
       <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce opacity-70">
         <div className="w-7 h-12 border-2 border-white/50 rounded-full flex justify-center pt-2.5 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-          <div className="w-1.5 h-3 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full shadow-[0_0_8px_rgba(0,102,204,0.6)]" />
+          <div className="w-1.5 h-3 bg-linear-to-b from-blue-500 to-blue-600 rounded-full shadow-[0_0_8px_rgba(0,102,204,0.6)]" />
         </div>
       </div>
     </section>
